@@ -1,10 +1,11 @@
 [package]
-name = "bootstrap"
+name = "engine"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde_json = "1.0.87"
+wasmtime = "2.0.1"
 interface = { path = "../interface" }
+serde_json = "1.0.87"

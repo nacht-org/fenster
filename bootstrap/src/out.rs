@@ -40,6 +40,15 @@ pub fn _print_args(args: fmt::Arguments) {
     let _ = _print(&buf);
 }
 
+/// Used by the `println` macro
+#[doc(hidden)]
+pub fn _print_args_nl(args: fmt::Arguments) {
+    let mut buf = String::new();
+    let _ = buf.write_fmt(args);
+    buf.push('\n');
+    let _ = _eprint(&buf);
+}
+
 /// Used by the `eprint` macro
 #[doc(hidden)]
 pub fn _eprint_args(args: fmt::Arguments) {
@@ -51,13 +60,18 @@ pub fn _eprint_args(args: fmt::Arguments) {
 /// Overrides the default `print!` macro.
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::_print_args(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::out::_print_args(format_args!($($arg)*)));
+}
+
+#[macro_export]
+macro_rules! println {
+    ($($arg:tt)*) => ($crate::out::_print_args_nl(format_args!($($arg)*)));
 }
 
 /// Overrides the default `eprint!` macro.
 #[macro_export]
 macro_rules! eprint {
-    ($($arg:tt)*) => ($crate::_eprint_args(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::out::_eprint_args(format_args!($($arg)*)));
 }
 
 pub fn set_panic_hook() {

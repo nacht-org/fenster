@@ -1,34 +1,22 @@
-use std::os::raw::c_char;
+use std::{ffi::CString, os::raw::c_char};
 
-use serde::{Deserialize, Serialize};
+use interface::{Request, Response};
 
 extern "C" {
-    fn ext_send_request(ptr: *const c_char) -> *const c_char;
+    fn ext_send_request(ptr: *const c_char) -> *mut c_char;
 }
 
 pub fn send_request(request: Request) -> serde_json::Result<Response> {
-    let request_string = serde_json::to_string(&request)?;
-    println!("{request_string}");
-    Ok(Response {})
-}
+    let req = serde_json::to_string(&request)?;
+    let req = CString::new(req).unwrap();
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Request {
-    method: Method,
-    url: String,
-    params: String,
-    data: String,
-    headers: String,
-}
+    let resp = unsafe {
+        let ptr = ext_send_request(req.as_ptr());
+        let resp = CString::from_raw(ptr);
+        let resp = resp.into_string().unwrap();
+        let resp = serde_json::from_str::<Response>(&resp)?;
+        resp
+    };
 
-#[derive(Serialize, Deserialize, Debug)]
-pub enum Method {
-    Get,
-    Post,
-    Put,
-    Patch,
-    Delete,
+    Ok(resp)
 }
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Response {}
