@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::{__private::Span, quote};
 use syn::{
     parenthesized, parse::Parse, parse_macro_input, punctuated::Punctuated, token::Comma, Block,
-    FnArg, Ident, PatType, ReturnType, Token,
+    FnArg, Ident, PatType, Path, ReturnType, Token, TypePath,
 };
 
 struct Expose {
@@ -63,13 +63,32 @@ pub fn expose(
                     let return_ty = &param.pat.ty;
                     let ptr_ident = &param.ident;
 
-                    println!("{}", quote!( #return_ty ));
-
-                    quote! {
-                        let #return_ident: #return_ty = unsafe {
-                            let __c = std::ffi::CString::from_raw(#ptr_ident).into_string().unwrap();
-                            serde_json::from_str(&__c).unwrap()
+                    macro_rules! match_rtype {
+                        ($($ty:ident => $ac:block),+, _ => $el:block) => {
+                            match return_ty.as_ref() {
+                                $(
+                                    syn::Type::Path(TypePath {qself: _, path: Path { leading_colon: _, segments }}) if segments.last().unwrap().ident == "$ty" => $ac
+                                ),*
+                                syn::Type::Path(TypePath {qself: _, path: _}) => $el,
+                                _ => panic!("'{}' is not supported in exposed function", quote!(#return_ty)),
+                            }
                         };
+                    }
+
+                    match_rtype! {
+                        String => {
+                            quote! {
+                                let #return_ident: #return_ty = unsafe { std::ffi::CString::from_raw(#ptr_ident).into_string().unwrap() };
+                            }
+                        },
+                        _ => {
+                            quote! {
+                                let #return_ident: #return_ty = unsafe {
+                                    let __c = std::ffi::CString::from_raw(#ptr_ident).into_string().unwrap();
+                                    serde_json::from_str(&__c).unwrap()
+                                };
+                            }
+                        }
                     }
                 })
                 .collect::<Vec<_>>()
