@@ -1,6 +1,6 @@
 use std::{ffi::CString, os::raw::c_char};
 
-use interface::{Request, Response};
+use fenster_core::{Request, Response};
 
 extern "C" {
     fn ext_send_request(ptr: *const c_char) -> *mut c_char;

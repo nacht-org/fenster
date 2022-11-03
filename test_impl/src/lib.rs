@@ -1,8 +1,8 @@
 #[macro_use]
-extern crate bootstrap;
+extern crate fenster_glue;
 
-use bootstrap::http::send_request;
-use interface::{Method, Request};
+use fenster_core::{Method, Request};
+use fenster_glue::http::send_request;
 
 #[no_mangle]
 pub extern "C" fn _main() {

@@ -1,5 +1,5 @@
 [workspace]
-members = ["bootstrap", "engine", "interface", "test_impl"]
+members = ["glue", "engine", "core", "test_impl"]
 
 [profile.release]
 opt-level = "z"

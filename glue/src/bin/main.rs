@@ -1,5 +1,5 @@
-use bootstrap::http::send_request;
-use interface::{Method, Request};
+use fenster_core::{Method, Request};
+use fenster_glue::http::send_request;
 
 fn main() {
     let response = send_request(Request {

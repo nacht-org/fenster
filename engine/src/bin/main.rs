@@ -1,4 +1,4 @@
-use engine::{ext_eprint, ext_print, ext_send_request, ext_trace};
+use fenster_engine::{ext_eprint, ext_print, ext_send_request, ext_trace};
 use std::error::Error;
 use wasmtime::*;
 

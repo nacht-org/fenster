@@ -9,5 +9,5 @@ edition = "2021"
 crate-type = ['cdylib']
 
 [dependencies]
-interface = { path = "../interface" }
-bootstrap = { path = "../bootstrap" }
+fenster_core = { path = "../core" }
+fenster_glue = { path = "../glue" }

@@ -1,6 +1,6 @@
 use std::ffi::CStr;
 
-use interface::Request;
+use fenster_core::Request;
 use wasmtime::{AsContext, AsContextMut, Caller, Memory};
 
 pub fn ext_print(mut caller: Caller<'_, ()>, ptr: i32) {
