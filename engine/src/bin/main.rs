@@ -20,8 +20,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let instance = linker.instantiate(&mut store, &module)?;
 
     let run = instance
-        .get_func(&mut store, "_main")
-        .expect("`run` was not an exported function");
+        .get_func(&mut store, "main")
+        .expect("'main' was not an exported function");
 
     run.typed::<(), (), _>(&store)?.call(&mut store, ())?;
     Ok(())

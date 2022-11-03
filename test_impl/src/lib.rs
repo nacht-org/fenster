@@ -10,8 +10,8 @@ pub fn fetch_novel(url: String) -> Result<(), String> {
     Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn _main() {
+#[expose]
+pub fn main() {
     set_panic_hook();
 
     let request = Request {
