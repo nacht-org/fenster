@@ -1,6 +1,6 @@
-use std::ffi::CStr;
+use std::{ffi::CStr, str::FromStr};
 
-use fenster_core::Request;
+use fenster_core::{Request, RequestError, RequestErrorKind, Response};
 use wasmtime::{AsContext, AsContextMut, Caller, Memory};
 
 pub fn ext_print(mut caller: Caller<'_, ()>, ptr: i32) {
@@ -42,11 +42,39 @@ pub fn ext_send_request(mut caller: Caller<'_, ()>, ptr: i32) -> i32 {
     let request = serde_json::from_str::<Request>(request).unwrap();
     println!("{request:?}");
 
-    let value = serde_json::json!({
-        "status": 200
-    });
-    let json = serde_json::to_string(&value).unwrap();
+    let client = reqwest::blocking::Client::new();
+    let response = client.execute(reqwest::blocking::Request::new(
+        reqwest::Method::GET,
+        reqwest::Url::from_str(&request.url).unwrap(),
+    ));
+
+    let response = parse_response(response);
+    let json = serde_json::to_string(&response).unwrap();
+
     write_string(&mut caller, &memory, json.as_str())
+}
+
+fn parse_response(
+    response: reqwest::Result<reqwest::blocking::Response>,
+) -> Result<Response, RequestError> {
+    let response = response?;
+    let header_map = response
+        .headers()
+        .into_iter()
+        .map(|(n, v)| (n.to_string(), v.to_str().unwrap_or_default().to_string()))
+        .collect::<std::collections::HashMap<_, _>>();
+
+    let headers = serde_json::to_string(&header_map).map_err(|_| RequestError {
+        kind: RequestErrorKind::Serial,
+        url: Some(response.url().as_str().to_string()),
+        message: String::from("failed to serialize response"),
+    })?;
+
+    Ok(Response {
+        status: response.status().as_u16() as usize,
+        body: response.text().ok(),
+        headers: Some(headers),
+    })
 }
 
 fn read_string<'c, 'm>(caller: &'c mut Caller<'_, ()>, memory: &'m Memory, ptr: i32) -> &'m str {

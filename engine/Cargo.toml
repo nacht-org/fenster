@@ -7,6 +7,6 @@ edition = "2021"
 
 [dependencies]
 wasmtime = "2.0.1"
-fenster_core = { path = "../core" }
+fenster_core = { path = "../core", features = ["reqwest"] }
 serde_json = "1.0.87"
-reqwest = "0.11.12"
+reqwest = { version = "0.11.12", features = ["blocking"] }

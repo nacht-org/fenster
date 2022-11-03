@@ -8,7 +8,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let module = Module::from_file(
         &engine,
-        "target/wasm32-unknown-unknown/release/test_impl.wasm",
+        "target/wasm32-unknown-unknown/debug/test_impl.wasm",
     )?;
 
     linker.func_wrap("env", "ext_send_request", ext_send_request)?;
