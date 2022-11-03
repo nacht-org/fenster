@@ -3,6 +3,12 @@ extern crate fenster_glue;
 
 use fenster_core::{Method, Request};
 use fenster_glue::{http::send_request, out::set_panic_hook};
+use fenster_glue_derive::expose;
+
+#[expose]
+pub fn fetch_novel(url: String) -> Result<(), String> {
+    Ok(())
+}
 
 #[no_mangle]
 pub extern "C" fn _main() {
