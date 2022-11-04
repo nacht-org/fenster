@@ -1,5 +1,7 @@
+mod error;
 mod mem;
 
+pub use error::*;
 pub use mem::*;
 
 use serde::{Deserialize, Serialize};
@@ -79,6 +81,3 @@ impl From<reqwest::Error> for RequestError {
         RequestError { kind, url, message }
     }
 }
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum ExposeError {}

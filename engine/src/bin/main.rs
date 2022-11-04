@@ -23,6 +23,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .get_func(&mut store, "main")
         .expect("'main' was not an exported function");
 
-    run.typed::<(), (), _>(&store)?.call(&mut store, ())?;
+    run.typed::<(), (i32,), _>(&store)?.call(&mut store, ())?;
     Ok(())
 }

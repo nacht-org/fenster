@@ -39,6 +39,7 @@ pub fn ext_send_request(mut caller: Caller<'_, ()>, ptr: i32) -> i32 {
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
 
     let request = read_string(&mut caller, &memory, ptr);
+    println!("{request:?}");
     let request = serde_json::from_str::<Request>(request).unwrap();
     println!("{request:?}");
 

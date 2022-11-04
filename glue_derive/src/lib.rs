@@ -97,10 +97,7 @@ pub fn expose(
                         },
                         _ => {
                             quote! {
-                                let #pat: #ty = unsafe {
-                                    let __c = std::ffi::CString::from_raw(#pat).into_string().unwrap();
-                                    serde_json::from_str(&__c).unwrap()
-                                };
+                                let #pat: #ty = #ty::from_mem(#pat);
                             }
                         }
                     }
@@ -116,38 +113,28 @@ pub fn expose(
 
     let extern_return = {
         match &rtype {
-            ReturnType::Default => quote!(),
-            ReturnType::Type(_, _) => quote!( -> *mut std::os::raw::c_char ),
+            ReturnType::Default => quote!(()),
+            ReturnType::Type(_, ty) => quote!( #ty ),
         }
     };
 
     let extern_block = {
         match &rtype {
-            ReturnType::Default => {
-                let stmts = &block.stmts;
-                quote!( #(#stmts)* )
-            }
-            ReturnType::Type(_, ty) => quote!( let __original_return: #ty = #block; ),
-        }
-    };
-
-    let extern_rserial = {
-        match &rtype {
-            ReturnType::Default => quote!(),
-            ReturnType::Type(_, _) => quote! {
-                let __new_return = serde_json::to_string(&__original_return).unwrap();
-                let __new_return = std::ffi::CString::new(__new_return).unwrap();
-                __new_return.into_raw()
-            },
+            ReturnType::Default => quote!( let __ort: () = #block; ),
+            ReturnType::Type(_, ty) => quote!( let __ort: #ty = #block; ),
         }
     };
 
     let expanded = quote! {
         #[no_mangle]
-        pub extern "C" fn #name(#extern_params_stream) #extern_return {
-            #extern_parse
-            #extern_block
-            #extern_rserial
+        pub extern "C" fn #name(#extern_params_stream) -> *mut std::os::raw::c_char {
+            use fenster_core::{ToMem, FromMem};
+            let __rt: Result<#extern_return, fenster_core::ExposeError> = {
+                #extern_parse
+                #extern_block
+                Ok(__ort)
+            };
+            __rt.to_mem()
         }
     };
 
