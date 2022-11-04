@@ -6,7 +6,7 @@ use fenster_glue::{http::send_request, out::set_panic_hook};
 use fenster_glue_derive::expose;
 
 #[expose]
-pub fn fetch_novel(url: String) -> Result<(), String> {
+pub fn fetch_novel(url: String, skip: bool) -> Result<(), String> {
     Ok(())
 }
 

@@ -1,3 +1,7 @@
+mod mem;
+
+pub use mem::*;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
