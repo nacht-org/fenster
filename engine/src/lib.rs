@@ -1,9 +1,13 @@
-use std::{error, ffi::CStr, str::FromStr};
+use std::{
+    error,
+    ffi::{CStr, CString},
+    str::FromStr,
+};
 
-use fenster_core::{Request, RequestError, RequestErrorKind, Response};
+use fenster_core::prelude::*;
 use wasmtime::{
     AsContext, AsContextMut, Caller, Engine, Instance, Linker, Memory, Module, Store,
-    StoreContextMut,
+    StoreContextMut, TypedFunc,
 };
 
 pub fn ext_print(mut caller: Caller<'_, ()>, ptr: i32) {
@@ -89,7 +93,7 @@ fn read_string<'c, 'm>(
     unsafe {
         let ptr = memory.data_ptr(&store).offset(ptr as isize);
         let cstr = CStr::from_ptr(ptr as *const i8);
-        let str = cstr.clone().to_str().unwrap();
+        let str = cstr.to_str().unwrap();
         str
     }
 }
@@ -110,12 +114,19 @@ fn write_string<'c, 'm>(caller: &'c mut Caller<'_, ()>, memory: &'m Memory, valu
     ptr
 }
 
+#[allow(dead_code)]
 pub struct Runner {
     engine: Engine,
     module: Module,
     store: Store<()>,
     instance: Instance,
     memory: Memory,
+    functions: Functions,
+}
+
+struct Functions {
+    meta: TypedFunc<(), i32>,
+    fetch_novel: TypedFunc<i32, i32>,
 }
 
 impl Runner {
@@ -136,27 +147,82 @@ impl Runner {
             .get_memory(&mut store, "memory")
             .ok_or(anyhow::format_err!("failed to find `memory` export"))?;
 
+        let functions = Functions {
+            meta: instance
+                .get_func(&mut store, "meta")
+                .expect("'meta' is not an exported function")
+                .typed::<(), i32, _>(&store)
+                .unwrap(),
+            fetch_novel: instance
+                .get_func(&mut store, "fetch_novel")
+                .expect("'fetch_novel' is not an exported function")
+                .typed::<i32, i32, _>(&store)
+                .unwrap(),
+        };
+
         Ok(Self {
             engine,
             module,
             store,
             instance,
             memory,
+            functions,
         })
     }
 
     pub fn meta(&mut self) -> Result<(), Box<dyn error::Error>> {
-        let run = self
-            .instance
-            .get_func(&mut self.store, "meta")
-            .expect("'meta' was not an exported function");
-
-        let ptr = run
-            .typed::<(), i32, _>(&self.store)?
-            .call(&mut self.store, ())?;
+        let ptr = self.functions.meta.call(&mut self.store, ())?;
 
         let r = read_string(&mut self.store.as_context_mut(), &self.memory, ptr);
         println!("{r}");
+        self.dealloc_string(ptr)?;
+
+        Ok(())
+    }
+
+    pub fn fetch_novel(&mut self, url: &str) -> Result<(), Box<dyn error::Error>> {
+        let iptr = self.write_string(url)?;
+        let rptr = self.functions.fetch_novel.call(&mut self.store, iptr)?;
+
+        let r = read_string(&mut self.store.as_context_mut(), &self.memory, rptr);
+        println!("{r}");
+        self.dealloc_string(rptr)?;
+
+        Ok(())
+    }
+
+    fn write_string(&mut self, value: &str) -> Result<i32, Box<dyn error::Error>> {
+        let string = CString::new(value).unwrap();
+
+        // length of the string with trailing null byte
+        let ptr = self.alloc_memory((value.len() + 1) as i32)?;
+
+        self.memory
+            .write(&mut self.store, ptr as usize, string.as_bytes_with_nul())
+            .unwrap();
+
+        Ok(ptr)
+    }
+
+    fn alloc_memory(&mut self, len: i32) -> Result<i32, Box<dyn error::Error>> {
+        let alloc = self.instance.get_func(&mut self.store, "alloc").unwrap();
+
+        let ptr = alloc
+            .typed::<i32, i32, _>(&self.store)?
+            .call(&mut self.store, len)?;
+
+        Ok(ptr)
+    }
+
+    fn dealloc_string(&mut self, ptr: i32) -> Result<(), Box<dyn error::Error>> {
+        let dealloc = self
+            .instance
+            .get_func(&mut self.store, "dealloc_string")
+            .unwrap();
+
+        dealloc
+            .typed::<i32, (), _>(&self.store)?
+            .call(&mut self.store, ptr)?;
 
         Ok(())
     }

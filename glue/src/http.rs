@@ -1,6 +1,6 @@
 use std::{ffi::CString, os::raw::c_char};
 
-use fenster_core::{BoxedRequestError, Request, RequestError, RequestErrorKind, Response};
+use fenster_core::prelude::*;
 
 extern "C" {
     fn ext_send_request(ptr: *const c_char) -> *mut c_char;

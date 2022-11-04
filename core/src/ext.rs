@@ -21,3 +21,9 @@ pub enum ReadingDirection {
 pub enum Attribute {
     Fanfiction,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Novel {
+    pub title: String,
+    pub url: String,
+}

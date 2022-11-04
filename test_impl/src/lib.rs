@@ -1,9 +1,8 @@
 #[macro_use]
 extern crate fenster_glue;
 
-use fenster_core::{Method, Request};
-use fenster_glue::{http::send_request, out::set_panic_hook};
-use fenster_glue_derive::expose;
+use fenster_core::prelude::*;
+use fenster_glue::prelude::*;
 
 #[expose]
 pub fn fetch_novel(url: String) -> Result<(), String> {
@@ -22,6 +21,6 @@ pub fn main() {
         headers: None,
     };
 
-    let response = send_request(request);
+    let response = http::send_request(request);
     println!("{response:#?}");
 }
