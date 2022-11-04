@@ -1,8 +1,5 @@
-mod error;
-mod mem;
-
-pub use error::*;
-pub use mem::*;
+pub mod ext;
+pub mod mem;
 
 use serde::{Deserialize, Serialize};
 

@@ -1,5 +1,5 @@
 [workspace]
-members = ["glue", "glue_derive", "engine", "core", "test_impl"]
+members = ["glue", "glue_derive", "engine", "core", "test_impl", "extensions/scribblehub"]
 
 [profile.release]
 opt-level = "z"
