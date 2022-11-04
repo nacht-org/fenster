@@ -97,7 +97,7 @@ pub fn expose(
                         },
                         _ => {
                             quote! {
-                                let #pat: #ty = #ty::from_mem(#pat);
+                                let #pat: #ty = #pat.to_mem();
                             }
                         }
                     }
@@ -113,28 +113,35 @@ pub fn expose(
 
     let extern_return = {
         match &rtype {
-            ReturnType::Default => quote!(()),
-            ReturnType::Type(_, ty) => quote!( #ty ),
+            ReturnType::Default => quote!(),
+            ReturnType::Type(_, _) => quote!( -> *mut std::os::raw::c_char ),
         }
     };
 
     let extern_block = {
         match &rtype {
-            ReturnType::Default => quote!( let __ort: () = #block; ),
+            ReturnType::Default => {
+                let stmts = &block.stmts;
+                quote!( #(#stmts)* )
+            }
             ReturnType::Type(_, ty) => quote!( let __ort: #ty = #block; ),
+        }
+    };
+
+    let extern_rserial = {
+        match &rtype {
+            ReturnType::Default => quote!(),
+            ReturnType::Type(_, _) => quote!(__ort.to_mem()),
         }
     };
 
     let expanded = quote! {
         #[no_mangle]
-        pub extern "C" fn #name(#extern_params_stream) -> *mut std::os::raw::c_char {
+        pub extern "C" fn #name(#extern_params_stream) #extern_return {
             use fenster_core::{ToMem, FromMem};
-            let __rt: Result<#extern_return, fenster_core::ExposeError> = {
-                #extern_parse
-                #extern_block
-                Ok(__ort)
-            };
-            __rt.to_mem()
+            #extern_parse
+            #extern_block
+            #extern_rserial
         }
     };
 
