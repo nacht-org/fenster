@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Request {
@@ -7,6 +8,46 @@ pub struct Request {
     pub params: Option<String>,
     pub data: Option<String>,
     pub headers: Option<String>,
+}
+
+impl Request {
+    pub fn new(method: Method, url: String) -> Self {
+        Request {
+            method,
+            url,
+            params: None,
+            data: None,
+            headers: None,
+        }
+    }
+
+    #[inline]
+    pub fn get(url: String) -> Self {
+        Request::new(Method::Get, url)
+    }
+
+    #[inline]
+    pub fn post(url: String) -> Self {
+        Request::new(Method::Post, url)
+    }
+
+    pub fn json_params(mut self, value: &Value) -> Result<Self, serde_json::Error> {
+        let params = serde_json::to_string(value)?;
+        self.params = Some(params);
+        Ok(self)
+    }
+
+    pub fn json_data(mut self, value: &Value) -> Result<Self, serde_json::Error> {
+        let data = serde_json::to_string(value)?;
+        self.data = Some(data);
+        Ok(self)
+    }
+
+    pub fn json_headers(mut self, value: &Value) -> Result<Self, serde_json::Error> {
+        let headers = serde_json::to_string(value)?;
+        self.headers = Some(headers);
+        Ok(self)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

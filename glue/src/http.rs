@@ -35,3 +35,14 @@ pub fn send_request(request: Request) -> Result<Response, BoxedRequestError> {
 
     resp.map_err(|e| e.into())
 }
+
+pub trait SendRequest {
+    fn send(self) -> Result<Response, BoxedRequestError>;
+}
+
+impl SendRequest for Request {
+    #[inline]
+    fn send(self) -> Result<Response, BoxedRequestError> {
+        send_request(self)
+    }
+}
