@@ -2,8 +2,8 @@ mod args;
 
 use quote::quote;
 use syn::{
-    parenthesized, parse::Parse, parse_macro_input, punctuated::Punctuated, Block, FnArg, Ident,
-    Path, ReturnType, Token, TypePath,
+    parenthesized, parse::Parse, parse_macro_input, punctuated::Punctuated, token::Comma, Block,
+    FnArg, Ident, Path, ReturnType, Token, TypePath,
 };
 
 use crate::args::{get_extern_params, get_extern_params_stream};
@@ -57,7 +57,7 @@ pub fn expose(
         rtype,
     } = parse_macro_input!(item as Expose);
 
-    let extern_params = params.map(|params| get_extern_params(&params));
+    let extern_params = params.as_ref().map(get_extern_params);
     let extern_params_stream = extern_params.as_ref().map(get_extern_params_stream);
 
     let extern_parse = extern_params
@@ -124,14 +124,23 @@ pub fn expose(
                 let stmts = &block.stmts;
                 quote!( #(#stmts)* )
             }
-            ReturnType::Type(_, ty) => quote!( let __ort: #ty = #block; ),
+            ReturnType::Type(_, ty) => quote!( #[inline] fn __inner_fn(#params) -> #ty #block ),
         }
     };
 
     let extern_rserial = {
         match &rtype {
             ReturnType::Default => quote!(),
-            ReturnType::Type(_, _) => quote!(__ort.to_mem()),
+            ReturnType::Type(_, _) => {
+                let args = extern_params.map(|params| {
+                    params
+                        .iter()
+                        .map(|arg| arg.pat.pat.clone())
+                        .collect::<Punctuated<_, Comma>>()
+                });
+
+                quote!( __inner_fn(#args).to_mem() )
+            }
         }
     };
 
@@ -145,6 +154,6 @@ pub fn expose(
         }
     };
 
-    println!("{expanded}");
+    // println!("{expanded}");
     expanded.into()
 }

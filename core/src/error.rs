@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-use crate::http::RequestError;
+use crate::http::BoxedRequestError;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum FensterError {
-    RequestFailed(RequestError),
+    RequestFailed(BoxedRequestError),
 }
 
-impl From<RequestError> for FensterError {
-    fn from(error: RequestError) -> Self {
+impl From<BoxedRequestError> for FensterError {
+    fn from(error: BoxedRequestError) -> Self {
         FensterError::RequestFailed(error)
     }
 }
