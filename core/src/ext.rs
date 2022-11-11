@@ -25,5 +25,9 @@ pub enum Attribute {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Novel {
     pub title: String,
+    pub author: Vec<String>,
     pub url: String,
+    pub thumb: Option<String>,
+    pub desc: Vec<String>,
+    pub lang: Vec<String>,
 }

@@ -35,8 +35,22 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
     Ok(Novel {
         title: doc
             .select_first("h1[property=\"name\"]")
-            .map(|node| node.text_contents())
+            .map(|node| node.text_contents().trim().to_string())
             .unwrap_or_default(),
+        author: vec![doc
+            .select_first(r#"span[property="name"]"#)
+            .map(|node| node.text_contents().trim().to_string())
+            .unwrap_or_default()],
+        thumb: doc
+            .select_first(".page-content-inner .thumbnail")
+            .map(|node| node.attributes.borrow().get("src").map(|s| s.to_string()))
+            .ok()
+            .flatten(),
+        desc: doc
+            .select(r#".description > [property="description"] > p"#)
+            .map(|nodes| nodes.map(|node| node.text_contents()).collect::<Vec<_>>())
+            .unwrap_or(vec![]),
+        lang: vec![META.lang.to_string()],
         url,
     })
 }
