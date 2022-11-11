@@ -141,6 +141,15 @@ pub struct Runner {
 }
 
 struct Functions {
+    // Memory
+    alloc: TypedFunc<i32, i32>,
+    dealloc: TypedFunc<(i32, i32), ()>,
+
+    // Stack
+    stack_push: TypedFunc<i32, ()>,
+    stack_pop: TypedFunc<(), i32>,
+
+    // User
     meta: TypedFunc<(), i32>,
     fetch_novel: TypedFunc<i32, i32>,
 }
@@ -164,16 +173,30 @@ impl Runner {
             .ok_or(anyhow::format_err!("failed to find `memory` export"))?;
 
         let functions = Functions {
+            alloc: instance
+                .get_func(&mut store, "alloc")
+                .expect("'alloc' is not an exported function")
+                .typed(&store)?,
+            dealloc: instance
+                .get_func(&mut store, "dealloc")
+                .expect("'dealloc' is not an exported function")
+                .typed(&store)?,
+            stack_push: instance
+                .get_func(&mut store, "stack_push")
+                .expect("'stack_push' is not an exported function")
+                .typed(&store)?,
+            stack_pop: instance
+                .get_func(&mut store, "stack_pop")
+                .expect("'stack_pop' is not an exported function")
+                .typed(&store)?,
             meta: instance
                 .get_func(&mut store, "meta")
                 .expect("'meta' is not an exported function")
-                .typed::<(), i32, _>(&store)
-                .unwrap(),
+                .typed(&store)?,
             fetch_novel: instance
                 .get_func(&mut store, "fetch_novel")
                 .expect("'fetch_novel' is not an exported function")
-                .typed::<i32, i32, _>(&store)
-                .unwrap(),
+                .typed(&store)?,
         };
 
         Ok(Self {
@@ -198,29 +221,46 @@ impl Runner {
     }
 
     pub fn meta(&mut self) -> Result<(), Box<dyn error::Error>> {
-        // let ptr = self.functions.meta.call(&mut self.store, ())?;
+        let ptr = self.functions.meta.call(&mut self.store, ())?;
 
-        // let r = read_string(&mut self.store.as_context_mut(), &self.memory, ptr);
-        // println!("{r}");
-        // self.dealloc_string(ptr)?;
+        let r = self.read_string(ptr)?;
+        println!("{r}");
+
+        let len = r.len() as i32;
+        self.dealloc_memory(ptr, len)?;
 
         Ok(())
     }
 
     pub fn fetch_novel(&mut self, url: &str) -> Result<(), Box<dyn error::Error>> {
-        // let iptr = self.write_string(url)?;
-        // let rptr = self.functions.fetch_novel.call(&mut self.store, iptr)?;
+        let iptr = self.write_string(url)?;
+        let rptr = self.functions.fetch_novel.call(&mut self.store, iptr)?;
 
-        // let r = read_string(&mut self.store.as_context_mut(), &self.memory, rptr);
-        // println!("{r}");
-        // self.dealloc_string(rptr)?;
+        let r = self.read_string(rptr)?;
+        println!("{r}");
+
+        let len = r.len() as i32;
+        self.dealloc_memory(rptr, len)?;
 
         Ok(())
+    }
+
+    fn read_string(&mut self, offset: i32) -> Result<&str, Box<dyn error::Error>> {
+        let len = self.stack_pop()? as usize;
+
+        let value = unsafe {
+            let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
+            let bytes = slice::from_raw_parts(ptr, len);
+            std::str::from_utf8(bytes).unwrap()
+        };
+
+        Ok(value)
     }
 
     fn write_string(&mut self, value: &str) -> Result<i32, Box<dyn error::Error>> {
         // length of the string with trailing null byte
         let ptr = self.alloc_memory(value.len() as i32)?;
+        self.stack_push(value.len() as i32)?;
 
         self.memory
             .write(&mut self.store, ptr as usize, value.as_bytes())
@@ -230,25 +270,26 @@ impl Runner {
     }
 
     fn alloc_memory(&mut self, len: i32) -> Result<i32, Box<dyn error::Error>> {
-        let alloc = self.instance.get_func(&mut self.store, "alloc").unwrap();
-
-        let ptr = alloc
-            .typed::<i32, i32, _>(&self.store)?
-            .call(&mut self.store, len)?;
-
+        let ptr = self.functions.alloc.call(&mut self.store, len)?;
         Ok(ptr)
     }
 
-    fn dealloc_string(&mut self, ptr: i32) -> Result<(), Box<dyn error::Error>> {
-        let dealloc = self
-            .instance
-            .get_func(&mut self.store, "dealloc_string")
-            .unwrap();
-
-        dealloc
-            .typed::<i32, (), _>(&self.store)?
-            .call(&mut self.store, ptr)?;
-
+    fn dealloc_memory(&mut self, ptr: i32, len: i32) -> Result<(), Box<dyn error::Error>> {
+        self.functions.dealloc.call(&mut self.store, (ptr, len))?;
         Ok(())
+    }
+
+    fn stack_push(&mut self, size: i32) -> Result<(), Box<dyn error::Error>> {
+        self.functions
+            .stack_push
+            .call(&mut self.store, size)
+            .map_err(|e| e.into())
+    }
+
+    fn stack_pop(&mut self) -> Result<i32, Box<dyn error::Error>> {
+        self.functions
+            .stack_pop
+            .call(&mut self.store, ())
+            .map_err(|e| e.into())
     }
 }

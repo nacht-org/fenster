@@ -9,9 +9,9 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         .parse_default_env()
         .init();
 
-    let mut runner = Runner::new("target/wasm32-unknown-unknown/debug/test_impl.wasm")?;
-    runner.main()?;
-    // runner.meta()?;
-    // runner.fetch_novel("https://www.royalroad.com/fiction/21220/mother-of-learning")?;
+    let mut runner = Runner::new("target/wasm32-unknown-unknown/debug/ext_scribblehub.wasm")?;
+    // runner.main()?;
+    runner.meta()?;
+    runner.fetch_novel("https://www.royalroad.com/fiction/21220/mother-of-learning")?;
     Ok(())
 }

@@ -1,4 +1,7 @@
-use std::{ffi::CString, mem, sync::Mutex};
+use std::{mem, sync::Mutex};
+
+use fenster_core::prelude::Meta;
+use serde::Serialize;
 
 #[no_mangle]
 pub extern "C" fn alloc(len: usize) -> *mut u8 {
@@ -10,13 +13,6 @@ pub extern "C" fn alloc(len: usize) -> *mut u8 {
 pub extern "C" fn dealloc(ptr: *mut u8, len: usize) {
     let layout = std::alloc::Layout::from_size_align(len, 1).unwrap();
     unsafe { std::alloc::dealloc(ptr, layout) }
-}
-
-#[no_mangle]
-pub extern "C" fn dealloc_string(ptr: *mut i8) {
-    unsafe {
-        let _ = CString::from_raw(ptr);
-    }
 }
 
 #[derive(Debug)]
@@ -86,5 +82,64 @@ impl ToMem for &str {
     fn to_mem(self) -> Self::Type {
         stack_push(self.len() as i32);
         self.as_ptr()
+    }
+}
+
+#[macro_export]
+macro_rules! impl_mem_for_serde {
+    ($name:ty) => {
+        impl_from_mem_for_serde!($name)
+        impl_to_mem_for_serde!($name)
+    };
+}
+
+#[macro_export]
+macro_rules! impl_from_mem_for_serde {
+    ($name:ty) => {
+        impl crate::mem::FromMem for $name {
+            type Type = *mut u8;
+
+            fn from_mem(value: Self::Type) -> Self {
+                let len = crate::mem::stack_pop() as usize;
+                let bytes = unsafe { Vec::from_raw_parts(value, len, len) };
+                serde_json::from_bytes(bytes).unwrap()
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_to_mem_for_serde {
+    ($name:ty) => {
+        impl crate::mem::ToMem for $name {
+            type Type = *mut u8;
+
+            fn to_mem(self) -> Self::Type {
+                let mut string = serde_json::to_string(&self).unwrap();
+                crate::mem::stack_push(string.len() as i32);
+
+                let ptr = string.as_mut_ptr();
+                mem::forget(string);
+                ptr
+            }
+        }
+    };
+}
+
+impl_to_mem_for_serde!(&Meta<'_>);
+
+impl<T, E> ToMem for Result<T, E>
+where
+    Self: Serialize,
+{
+    type Type = *mut u8;
+
+    fn to_mem(self) -> Self::Type {
+        let mut string = serde_json::to_string(&self).unwrap();
+        crate::mem::stack_push(string.len() as i32);
+
+        let ptr = string.as_mut_ptr();
+        mem::forget(string);
+        ptr
     }
 }

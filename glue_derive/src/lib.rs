@@ -85,19 +85,9 @@ pub fn expose(
                         SUPPORTED_TYPES => {
                             quote! {}
                         },
-                        ["bool"] => {
-                            quote! {
-                                let #pat: #ty = #pat != 0;
-                            }
-                        },
-                        ["String"] => {
-                            quote! {
-                                let #pat: #ty = unsafe { std::ffi::CString::from_raw(#pat).into_string().unwrap() };
-                            }
-                        },
                         _ => {
                             quote! {
-                                let #pat: #ty = #pat.to_mem();
+                                let #pat: #ty = #ty::from_mem(#pat);
                             }
                         }
                     }
@@ -114,7 +104,7 @@ pub fn expose(
     let extern_return = {
         match &rtype {
             ReturnType::Default => quote!(),
-            ReturnType::Type(_, _) => quote!( -> *mut std::os::raw::c_char ),
+            ReturnType::Type(_, _) => quote!( -> *mut u8 ),
         }
     };
 
@@ -154,6 +144,6 @@ pub fn expose(
         }
     };
 
-    // println!("{expanded}");
+    println!("{expanded}");
     expanded.into()
 }

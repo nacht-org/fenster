@@ -18,7 +18,7 @@ pub(crate) fn get_extern_params(params: &Punctuated<FnArg, Comma>) -> Vec<Extern
             FnArg::Typed(p) => p,
         })
         .map(|pat| ExternArg {
-            ty: quote!(*mut std::os::raw::c_char),
+            ty: quote!(*mut u8),
             pat: pat.clone(),
         })
         .collect::<Vec<_>>()
