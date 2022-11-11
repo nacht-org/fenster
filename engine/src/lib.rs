@@ -270,13 +270,17 @@ impl Runner {
     }
 
     fn alloc_memory(&mut self, len: i32) -> Result<i32, Box<dyn error::Error>> {
-        let ptr = self.functions.alloc.call(&mut self.store, len)?;
-        Ok(ptr)
+        self.functions
+            .alloc
+            .call(&mut self.store, len)
+            .map_err(|e| e.into())
     }
 
     fn dealloc_memory(&mut self, ptr: i32, len: i32) -> Result<(), Box<dyn error::Error>> {
-        self.functions.dealloc.call(&mut self.store, (ptr, len))?;
-        Ok(())
+        self.functions
+            .dealloc
+            .call(&mut self.store, (ptr, len))
+            .map_err(|e| e.into())
     }
 
     fn stack_push(&mut self, size: i32) -> Result<(), Box<dyn error::Error>> {
