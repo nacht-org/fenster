@@ -32,12 +32,12 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
     let doc = kuchiki::parse_html().one(response.body.unwrap());
     println!("parsed doc");
 
-    Ok(Novel {
+    let novel = Novel {
         title: doc
             .select_first("h1[property=\"name\"]")
             .map(|node| node.text_contents().trim().to_string())
             .unwrap_or_default(),
-        author: vec![doc
+        authors: vec![doc
             .select_first(r#"span[property="name"]"#)
             .map(|node| node.text_contents().trim().to_string())
             .unwrap_or_default()],
@@ -51,6 +51,16 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
             .map(|nodes| nodes.map(|node| node.text_contents()).collect::<Vec<_>>())
             .unwrap_or(vec![]),
         lang: vec![META.lang.to_string()],
+        metadata: doc
+            .select(r#"a.label[href*="tag"]"#)
+            .map(|nodes| {
+                nodes
+                    .map(|node| Metadata::new(String::from("subject"), node.text_contents(), None))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default(),
         url,
-    })
+    };
+
+    Ok(novel)
 }
