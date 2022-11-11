@@ -4,9 +4,14 @@ extern crate fenster_glue;
 use fenster_core::prelude::*;
 use fenster_glue::prelude::*;
 
-#[expose]
-pub fn fetch_novel(url: String) -> Result<(), String> {
-    Ok(())
+#[no_mangle]
+pub extern "C" fn meta() -> i32 {
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn fetch_novel(_: i32) -> i32 {
+    0
 }
 
 #[expose]

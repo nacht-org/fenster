@@ -1,35 +1,28 @@
 use std::{
-    ffi::CString,
     fmt::{self, Write},
-    io,
-    os::raw::c_char,
     panic,
 };
 
+use crate::prelude::ToMem;
+
 extern "C" {
-    fn ext_print(ptr: *const c_char);
-    fn ext_eprint(ptr: *const c_char);
-    fn ext_trace(ptr: *const c_char);
+    fn ext_print(ptr: *const u8);
+    fn ext_eprint(ptr: *const u8);
+    fn ext_trace(ptr: *const u8);
 }
 
-fn _print(buf: &str) -> io::Result<()> {
-    let cstring = CString::new(buf)?;
-
+#[inline]
+fn _print(buf: &str) {
     unsafe {
-        ext_print(cstring.as_ptr());
+        ext_print(buf.to_mem());
     }
-
-    Ok(())
 }
 
-fn _eprint(buf: &str) -> io::Result<()> {
-    let cstring = CString::new(buf)?;
-
+#[inline]
+fn _eprint(buf: &str) {
     unsafe {
-        ext_eprint(cstring.as_ptr());
+        ext_eprint(buf.to_mem());
     }
-
-    Ok(())
 }
 
 /// Used by the `print` macro
@@ -89,10 +82,9 @@ pub fn set_panic_hook() {
         };
 
         let err_info = format!("Panicked at '{}', {}:{}:{}", msg, file, line, col);
-        let cstring = CString::new(err_info).unwrap();
 
         unsafe {
-            ext_trace(cstring.as_ptr());
+            ext_trace(err_info.as_str().to_mem());
         }
     }));
 }

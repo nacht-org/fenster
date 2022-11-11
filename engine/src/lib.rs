@@ -1,52 +1,40 @@
-use std::{
-    error,
-    ffi::{CStr, CString},
-    str::FromStr,
-};
-
 use fenster_core::prelude::*;
+use log::{debug, info, trace};
+use std::{error, slice, str::FromStr};
 use wasmtime::{
-    AsContext, AsContextMut, Caller, Engine, Instance, Linker, Memory, Module, Store,
-    StoreContextMut, TypedFunc,
+    AsContext, AsContextMut, Caller, Engine, Instance, Linker, Memory, Module, Store, TypedFunc,
 };
 
 pub fn ext_print(mut caller: Caller<'_, ()>, ptr: i32) {
-    println!("print called");
+    trace!("executing exposed function 'ext_print'");
 
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
-    unsafe {
-        let ptr = memory.data_ptr(&caller).offset(ptr as isize);
-        let bytes = CStr::from_ptr(ptr as *const i8);
-        let string = bytes.clone().to_str().unwrap();
-        print!("{string}");
-    }
+    let string = read_string(&mut caller, &memory, ptr);
+    print!("{string}");
 }
 
 pub fn ext_eprint(mut caller: Caller<'_, ()>, ptr: i32) {
+    trace!("executing exposed function 'ext_eprint'");
+
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
-    unsafe {
-        let ptr = memory.data_ptr(&caller).offset(ptr as isize);
-        let bytes = CStr::from_ptr(ptr as *const i8);
-        let string = bytes.clone().to_str().unwrap();
-        eprint!("{string}");
-    }
+    let string = read_string(&mut caller, &memory, ptr);
+    eprint!("{string}");
 }
 
 pub fn ext_trace(mut caller: Caller<'_, ()>, ptr: i32) {
+    trace!("executing exposed function 'ext_trace'");
+
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
-    unsafe {
-        let ptr = memory.data_ptr(&caller).offset(ptr as isize);
-        let bytes = CStr::from_ptr(ptr as *const i8);
-        let string = bytes.clone().to_str().unwrap();
-        eprintln!("{string}");
-    }
+    let string = read_string(&mut caller, &memory, ptr);
+    eprintln!("{string}");
 }
 
 pub fn ext_send_request(mut caller: Caller<'_, ()>, ptr: i32) -> i32 {
+    trace!("executing exposed function 'ext_send_request'");
+
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
 
-    let request = read_string(&mut caller.as_context_mut(), &memory, ptr);
-    println!("{request:?}");
+    let request = read_string(&mut caller, &memory, ptr);
     let request = serde_json::from_str::<Request>(request).unwrap();
     println!("{request:?}");
 
@@ -85,16 +73,16 @@ fn parse_response(
     })
 }
 
-fn read_string<'c, 'm>(
-    store: &'c mut StoreContextMut<'_, ()>,
-    memory: &'m Memory,
-    ptr: i32,
-) -> &'m str {
+fn read_string<'c, 'm>(caller: &'c mut Caller<'_, ()>, memory: &'m Memory, ptr: i32) -> &'m str {
+    info!("reading string from wasm memory");
+
+    let len = stack_pop(caller) as usize;
+    debug!("retrieved byte length from stack: {len}");
+
     unsafe {
-        let ptr = memory.data_ptr(&store).offset(ptr as isize);
-        let cstr = CStr::from_ptr(ptr as *const i8);
-        let str = cstr.to_str().unwrap();
-        str
+        let ptr = memory.data_ptr(&caller).offset(ptr as isize);
+        let bytes = slice::from_raw_parts(ptr, len);
+        std::str::from_utf8(bytes).unwrap()
     }
 }
 
@@ -103,15 +91,43 @@ fn write_string<'c, 'm>(caller: &'c mut Caller<'_, ()>, memory: &'m Memory, valu
 
     let ptr = alloc_func
         .typed::<i32, i32, _>(caller.as_context())
-        .expect("Failed to parse func type")
+        .unwrap()
         .call(caller.as_context_mut(), value.len() as i32)
-        .expect("Failed while calling alloc");
+        .unwrap();
+
+    stack_push(caller, value.len() as i32);
 
     memory
         .write(caller.as_context_mut(), ptr as usize, value.as_bytes())
         .unwrap();
 
     ptr
+}
+
+fn stack_push<'c, 'm>(caller: &'c mut Caller<'_, ()>, value: i32) {
+    let push_fn = caller
+        .get_export("stack_push")
+        .unwrap()
+        .into_func()
+        .unwrap();
+
+    push_fn
+        .typed::<i32, (), _>(&caller)
+        .unwrap()
+        .call(caller, value)
+        .unwrap();
+}
+
+fn stack_pop<'c, 'm>(caller: &'c mut Caller<'_, ()>) -> i32 {
+    let pop_fn = caller.get_export("stack_pop").unwrap().into_func().unwrap();
+
+    let value = pop_fn
+        .typed::<(), i32, _>(&caller)
+        .unwrap()
+        .call(caller, ())
+        .unwrap();
+
+    value
 }
 
 #[allow(dead_code)]
@@ -170,35 +186,44 @@ impl Runner {
         })
     }
 
-    pub fn meta(&mut self) -> Result<(), Box<dyn error::Error>> {
-        let ptr = self.functions.meta.call(&mut self.store, ())?;
+    pub fn main(&mut self) -> Result<(), Box<dyn error::Error>> {
+        let main_fn = self
+            .instance
+            .get_func(&mut self.store, "main")
+            .ok_or(anyhow::format_err!("failed to find `main` func export"))?
+            .typed::<(), (), _>(&self.store)?;
 
-        let r = read_string(&mut self.store.as_context_mut(), &self.memory, ptr);
-        println!("{r}");
-        self.dealloc_string(ptr)?;
+        main_fn.call(&mut self.store, ())?;
+        Ok(())
+    }
+
+    pub fn meta(&mut self) -> Result<(), Box<dyn error::Error>> {
+        // let ptr = self.functions.meta.call(&mut self.store, ())?;
+
+        // let r = read_string(&mut self.store.as_context_mut(), &self.memory, ptr);
+        // println!("{r}");
+        // self.dealloc_string(ptr)?;
 
         Ok(())
     }
 
     pub fn fetch_novel(&mut self, url: &str) -> Result<(), Box<dyn error::Error>> {
-        let iptr = self.write_string(url)?;
-        let rptr = self.functions.fetch_novel.call(&mut self.store, iptr)?;
+        // let iptr = self.write_string(url)?;
+        // let rptr = self.functions.fetch_novel.call(&mut self.store, iptr)?;
 
-        let r = read_string(&mut self.store.as_context_mut(), &self.memory, rptr);
-        println!("{r}");
-        self.dealloc_string(rptr)?;
+        // let r = read_string(&mut self.store.as_context_mut(), &self.memory, rptr);
+        // println!("{r}");
+        // self.dealloc_string(rptr)?;
 
         Ok(())
     }
 
     fn write_string(&mut self, value: &str) -> Result<i32, Box<dyn error::Error>> {
-        let string = CString::new(value).unwrap();
-
         // length of the string with trailing null byte
-        let ptr = self.alloc_memory((value.len() + 1) as i32)?;
+        let ptr = self.alloc_memory(value.len() as i32)?;
 
         self.memory
-            .write(&mut self.store, ptr as usize, string.as_bytes_with_nul())
+            .write(&mut self.store, ptr as usize, value.as_bytes())
             .unwrap();
 
         Ok(ptr)

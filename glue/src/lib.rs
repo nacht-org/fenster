@@ -1,4 +1,4 @@
 pub mod http;
-pub mod memory;
+pub mod mem;
 pub mod out;
 pub mod prelude;

@@ -1,5 +1,5 @@
 pub use crate::http;
-pub use crate::memory::*;
+pub use crate::mem::*;
 pub use crate::out::set_panic_hook;
 
 // Re-export proc expose
