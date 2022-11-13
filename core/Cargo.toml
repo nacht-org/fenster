@@ -12,3 +12,8 @@ serde_json = "1.0.87"
 
 [features]
 reqwest = ['dep:reqwest']
+
+[dependencies.chrono]
+version = "0.4.22"
+default-features = false
+features = ["clock", "iana-time-zone", "oldtime", "std", "time", "serde"]

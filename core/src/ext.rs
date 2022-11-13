@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -31,6 +32,7 @@ pub struct Novel {
     pub url: String,
     pub thumb: Option<String>,
     pub desc: Vec<String>,
+    pub volumes: Vec<Volume>,
     pub metadata: Vec<Metadata>,
     pub lang: Vec<String>,
 }
@@ -76,5 +78,50 @@ impl Metadata {
             ns,
             others: others.unwrap_or_default(),
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Volume {
+    pub index: i32,
+    pub name: String,
+    pub chapters: Vec<Chapter>,
+}
+
+impl Default for Volume {
+    fn default() -> Self {
+        Self {
+            index: -1,
+            name: String::from("_default"),
+            chapters: vec![],
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Chapter {
+    pub index: i32,
+    pub title: String,
+    pub url: String,
+    pub updated_at: Option<TaggedDateTime>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum TaggedDateTime {
+    Utc(DateTime<Utc>),
+    Local(NaiveDateTime),
+}
+
+impl From<DateTime<Utc>> for TaggedDateTime {
+    #[inline]
+    fn from(value: DateTime<Utc>) -> Self {
+        Self::Utc(value)
+    }
+}
+
+impl From<NaiveDateTime> for TaggedDateTime {
+    #[inline]
+    fn from(value: NaiveDateTime) -> Self {
+        Self::Local(value)
     }
 }

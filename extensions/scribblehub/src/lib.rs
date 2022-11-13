@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate fenster_glue;
 
+use chrono::{DateTime, NaiveDateTime, Utc};
 use fenster_core::prelude::*;
 use fenster_glue::{http::SendRequest, prelude::*};
 use kuchiki::traits::TendrilSink;
@@ -32,6 +33,51 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
     let doc = kuchiki::parse_html().one(response.body.unwrap());
     println!("parsed doc");
 
+    let mut volume = Volume::default();
+    volume.chapters = doc
+        .select("tbody > tr")
+        .map(|nodes| {
+            nodes
+                .filter_map(|tr| {
+                    tr.as_node()
+                        .select_first("a[href]")
+                        .ok()
+                        .map(|link| (tr, link))
+                })
+                .enumerate()
+                .map(|(i, (tr, link))| {
+                    let updated_at = tr
+                        .as_node()
+                        .select_first("time")
+                        .map(|node| {
+                            node.attributes
+                                .borrow()
+                                .get("unixtime")
+                                .map(|s| s.parse::<i64>().ok())
+                        })
+                        .ok()
+                        .flatten()
+                        .flatten()
+                        .map(|timestamp| NaiveDateTime::from_timestamp(timestamp, 0))
+                        .map(|naive| DateTime::from_utc(naive, Utc))
+                        .map(|dt| dt.into());
+
+                    Chapter {
+                        index: i as i32,
+                        title: link.text_contents().trim().to_string(),
+                        url: link
+                            .attributes
+                            .borrow()
+                            .get("href")
+                            .map(|s| s.to_string())
+                            .unwrap_or_default(),
+                        updated_at: updated_at,
+                    }
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
     let novel = Novel {
         title: doc
             .select_first("h1[property=\"name\"]")
@@ -51,6 +97,7 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
             .map(|nodes| nodes.map(|node| node.text_contents()).collect::<Vec<_>>())
             .unwrap_or(vec![]),
         lang: vec![META.lang.to_string()],
+        volumes: vec![volume],
         metadata: doc
             .select(r#"a.label[href*="tag"]"#)
             .map(|nodes| {

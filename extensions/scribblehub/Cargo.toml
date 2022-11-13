@@ -13,3 +13,8 @@ fenster_glue = { path = "../../glue" }
 kuchiki = "0.8.1"
 lazy_static = "1.4.0"
 serde_json = "1.0.87"
+
+[dependencies.chrono]
+version = "0.4.22"
+default-features = false
+features = ["clock", "iana-time-zone", "oldtime", "std", "time", "serde"]
