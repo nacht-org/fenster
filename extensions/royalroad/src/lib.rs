@@ -101,16 +101,18 @@ fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Vec<Chapter> {
             .map(|naive| DateTime::from_utc(naive, Utc))
             .map(|dt| dt.into());
 
+        let url = link
+            .attributes
+            .borrow()
+            .get("href")
+            .map(|s| s.to_string())
+            .unwrap_or_default();
+
         let chapter = Chapter {
             index: chapters.len() as i32,
             title: link.text_contents().trim().to_string(),
-            url: link
-                .attributes
-                .borrow()
-                .get("href")
-                .map(|s| s.to_string())
-                .unwrap_or_default(),
-            updated_at: updated_at,
+            url: META.derive_abs_url(url, None),
+            updated_at,
         };
 
         chapters.push(chapter);
