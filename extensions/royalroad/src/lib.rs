@@ -62,7 +62,7 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
             .select(r#".description > [property="description"] > p"#)
             .map(|nodes| nodes.map(|node| node.text_contents()).collect::<Vec<_>>())
             .unwrap_or(vec![]),
-        lang: vec![META.lang.to_string()],
+        lang: META.lang.to_string(),
         volumes: vec![volume],
         metadata: doc
             .select(r#"a.label[href*="tag"]"#)

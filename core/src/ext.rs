@@ -61,7 +61,7 @@ pub struct Novel {
     pub desc: Vec<String>,
     pub volumes: Vec<Volume>,
     pub metadata: Vec<Metadata>,
-    pub lang: Vec<String>,
+    pub lang: String,
 }
 
 const DUBLIN_CORE: [&'static str; 10] = [
