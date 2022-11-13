@@ -1,9 +1,7 @@
 use fenster_core::prelude::*;
 use log::{debug, info, trace};
 use std::{error, slice, str::FromStr};
-use wasmtime::{
-    AsContext, AsContextMut, Caller, Engine, Instance, Linker, Memory, Module, Store, TypedFunc,
-};
+use wasmtime::*;
 
 pub fn ext_print(mut caller: Caller<'_, ()>, ptr: i32) {
     trace!("executing exposed function 'ext_print'");
@@ -172,31 +170,22 @@ impl Runner {
             .get_memory(&mut store, "memory")
             .ok_or(anyhow::format_err!("failed to find `memory` export"))?;
 
+        macro_rules! get_func {
+            ($name:literal) => {
+                instance
+                    .get_func(&mut store, $name)
+                    .expect(r#"$name is not an exported function"#)
+                    .typed(&store)?
+            };
+        }
+
         let functions = Functions {
-            alloc: instance
-                .get_func(&mut store, "alloc")
-                .expect("'alloc' is not an exported function")
-                .typed(&store)?,
-            dealloc: instance
-                .get_func(&mut store, "dealloc")
-                .expect("'dealloc' is not an exported function")
-                .typed(&store)?,
-            stack_push: instance
-                .get_func(&mut store, "stack_push")
-                .expect("'stack_push' is not an exported function")
-                .typed(&store)?,
-            stack_pop: instance
-                .get_func(&mut store, "stack_pop")
-                .expect("'stack_pop' is not an exported function")
-                .typed(&store)?,
-            meta: instance
-                .get_func(&mut store, "meta")
-                .expect("'meta' is not an exported function")
-                .typed(&store)?,
-            fetch_novel: instance
-                .get_func(&mut store, "fetch_novel")
-                .expect("'fetch_novel' is not an exported function")
-                .typed(&store)?,
+            alloc: get_func!("alloc"),
+            dealloc: get_func!("dealloc"),
+            stack_push: get_func!("stack_push"),
+            stack_pop: get_func!("stack_pop"),
+            meta: get_func!("meta"),
+            fetch_novel: get_func!("fetch_novel"),
         };
 
         Ok(Self {
@@ -220,16 +209,16 @@ impl Runner {
         Ok(())
     }
 
-    pub fn meta(&mut self) -> Result<(), Box<dyn error::Error>> {
+    pub fn meta(&mut self) -> Result<Meta, Box<dyn error::Error>> {
         let ptr = self.functions.meta.call(&mut self.store, ())?;
 
-        let r = self.read_string(ptr)?;
-        println!("{r}");
+        let bytes = self.read_bytes(ptr)?;
+        let meta = serde_json::from_slice(bytes)?;
 
-        let len = r.len() as i32;
+        let len = bytes.len() as i32;
         self.dealloc_memory(ptr, len)?;
 
-        Ok(())
+        Ok(meta)
     }
 
     pub fn fetch_novel(&mut self, url: &str) -> Result<(), Box<dyn error::Error>> {
@@ -243,6 +232,18 @@ impl Runner {
         self.dealloc_memory(rptr, len)?;
 
         Ok(())
+    }
+
+    fn read_bytes(&mut self, offset: i32) -> Result<&[u8], Box<dyn error::Error>> {
+        let len = self.stack_pop()? as usize;
+
+        let value = unsafe {
+            let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
+            let bytes = slice::from_raw_parts(ptr, len);
+            bytes
+        };
+
+        Ok(value)
     }
 
     fn read_string(&mut self, offset: i32) -> Result<&str, Box<dyn error::Error>> {

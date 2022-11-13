@@ -1,5 +1,5 @@
 use fenster_engine::Runner;
-use log::LevelFilter;
+use log::{info, trace, LevelFilter};
 use std::error;
 
 fn main() -> Result<(), Box<dyn error::Error>> {
@@ -9,9 +9,16 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         .parse_default_env()
         .init();
 
-    let mut runner = Runner::new("target/wasm32-unknown-unknown/debug/ext_scribblehub.wasm")?;
+    trace!("initializing the wasm engine...");
+    let mut runner = Runner::new("target/wasm32-unknown-unknown/debug/extension_royalroad.wasm")?;
+
     // runner.main()?;
-    runner.meta()?;
-    runner.fetch_novel("https://www.royalroad.com/fiction/21220/mother-of-learning")?;
+
+    info!("Calling exposed wasm 'meta' function");
+    let meta = runner.meta()?;
+    println!("{meta:#?}");
+
+    // info!("Calling exposed wasm 'fetch_novel' function");
+    // runner.fetch_novel("https://www.royalroad.com/fiction/21220/mother-of-learning")?;
     Ok(())
 }

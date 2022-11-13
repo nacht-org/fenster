@@ -3,24 +3,24 @@ use std::collections::HashMap;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Meta<'a> {
-    pub id: &'a str,
-    pub name: &'a str,
-    pub lang: &'a str,
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Meta {
+    pub id: String,
+    pub name: String,
+    pub lang: String,
     pub version: [usize; 3],
-    pub base_urls: Vec<&'a str>,
+    pub base_urls: Vec<String>,
     pub rds: Vec<ReadingDirection>,
     pub attrs: Vec<Attribute>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum ReadingDirection {
     Ltr,
     Rtl,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum Attribute {
     Fanfiction,
 }

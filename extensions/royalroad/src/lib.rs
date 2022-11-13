@@ -8,19 +8,19 @@ use kuchiki::traits::TendrilSink;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref META: Meta<'static> = Meta {
-        id: "com.scribblehub",
-        name: "ScribbleHub",
-        lang: "en",
+    static ref META: Meta = Meta {
+        id: String::from("com.scribblehub"),
+        name: String::from("ScribbleHub"),
+        lang: String::from("en"),
         version: [0, 1, 0],
-        base_urls: vec!["https://www.scribblehub.com"],
+        base_urls: vec![String::from("https://www.scribblehub.com")],
         rds: vec![ReadingDirection::Ltr],
         attrs: vec![],
     };
 }
 
 #[expose]
-pub fn meta() -> &'static Meta<'static> {
+pub fn meta() -> &'static Meta {
     set_panic_hook();
     &META
 }

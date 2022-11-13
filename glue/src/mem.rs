@@ -126,7 +126,7 @@ macro_rules! impl_to_mem_for_serde {
     };
 }
 
-impl_to_mem_for_serde!(&Meta<'_>);
+impl_to_mem_for_serde!(&Meta);
 
 impl<T, E> ToMem for Result<T, E>
 where
