@@ -18,7 +18,8 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let meta = runner.meta()?;
     println!("{meta:#?}");
 
-    // info!("Calling exposed wasm 'fetch_novel' function");
-    // runner.fetch_novel("https://www.royalroad.com/fiction/21220/mother-of-learning")?;
+    info!("Calling exposed wasm 'fetch_novel' function");
+    let novel = runner.fetch_novel("https://www.royalroad.com/fiction/21220/mother-of-learning")?;
+    println!("{novel:#?}");
     Ok(())
 }

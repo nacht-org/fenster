@@ -221,17 +221,18 @@ impl Runner {
         Ok(meta)
     }
 
-    pub fn fetch_novel(&mut self, url: &str) -> Result<(), Box<dyn error::Error>> {
+    pub fn fetch_novel(&mut self, url: &str) -> Result<Novel, Box<dyn error::Error>> {
         let iptr = self.write_string(url)?;
         let rptr = self.functions.fetch_novel.call(&mut self.store, iptr)?;
 
-        let r = self.read_string(rptr)?;
-        println!("{r}");
+        let bytes = self.read_bytes(rptr)?;
+        let result: Result<Novel, FensterError> = serde_json::from_slice(bytes)?;
 
-        let len = r.len() as i32;
+        let len = bytes.len() as i32;
         self.dealloc_memory(rptr, len)?;
 
-        Ok(())
+        // TODO: temporary measure until errors are handled better.
+        Ok(result.unwrap())
     }
 
     fn read_bytes(&mut self, offset: i32) -> Result<&[u8], Box<dyn error::Error>> {
@@ -241,18 +242,6 @@ impl Runner {
             let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
             let bytes = slice::from_raw_parts(ptr, len);
             bytes
-        };
-
-        Ok(value)
-    }
-
-    fn read_string(&mut self, offset: i32) -> Result<&str, Box<dyn error::Error>> {
-        let len = self.stack_pop()? as usize;
-
-        let value = unsafe {
-            let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
-            let bytes = slice::from_raw_parts(ptr, len);
-            std::str::from_utf8(bytes).unwrap()
         };
 
         Ok(value)
