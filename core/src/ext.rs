@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Meta {
     pub id: String,
     pub name: String,
@@ -14,13 +14,13 @@ pub struct Meta {
     pub attrs: Vec<Attribute>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum ReadingDirection {
     Ltr,
     Rtl,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum Attribute {
     Fanfiction,
 }
