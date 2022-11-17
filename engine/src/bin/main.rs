@@ -21,5 +21,9 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     info!("Calling exposed wasm 'fetch_novel' function");
     let novel = runner.fetch_novel("https://www.royalroad.com/fiction/21220/mother-of-learning")?;
     println!("{novel:#?}");
+
+    info!("Calling exposed wasm 'fetch_chapter_content' function");
+    let content = runner.fetch_chapter_content("https://www.royalroad.com/fiction/21220/mother-of-learning/chapter/301778/1-good-morning-brother")?;
+    println!("{content:#?}");
     Ok(())
 }

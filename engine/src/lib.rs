@@ -150,6 +150,7 @@ struct Functions {
     // User
     meta: TypedFunc<(), i32>,
     fetch_novel: TypedFunc<i32, i32>,
+    fetch_chapter_content: TypedFunc<i32, i32>,
 }
 
 impl Runner {
@@ -186,6 +187,7 @@ impl Runner {
             stack_pop: get_func!("stack_pop"),
             meta: get_func!("meta"),
             fetch_novel: get_func!("fetch_novel"),
+            fetch_chapter_content: get_func!("fetch_chapter_content"),
         };
 
         Ok(Self {
@@ -227,6 +229,26 @@ impl Runner {
 
         let bytes = self.read_bytes(rptr)?;
         let result: Result<Novel, FensterError> = serde_json::from_slice(bytes)?;
+
+        let len = bytes.len() as i32;
+        self.dealloc_memory(rptr, len)?;
+
+        // TODO: temporary measure until errors are handled better.
+        Ok(result.unwrap())
+    }
+
+    pub fn fetch_chapter_content(
+        &mut self,
+        url: &str,
+    ) -> Result<Option<String>, Box<dyn error::Error>> {
+        let iptr = self.write_string(url)?;
+        let rptr = self
+            .functions
+            .fetch_chapter_content
+            .call(&mut self.store, iptr)?;
+
+        let bytes = self.read_bytes(rptr)?;
+        let result: Result<Option<String>, FensterError> = serde_json::from_slice(bytes)?;
 
         let len = bytes.len() as i32;
         self.dealloc_memory(rptr, len)?;
