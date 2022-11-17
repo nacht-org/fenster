@@ -66,7 +66,7 @@ pub struct Response {
     pub headers: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, thiserror::Error, Debug)]
 pub struct BoxedRequestError(Box<RequestError>);
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -74,6 +74,19 @@ pub struct RequestError {
     pub kind: RequestErrorKind,
     pub url: Option<String>,
     pub message: String,
+}
+
+impl std::fmt::Display for BoxedRequestError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self}")
+    }
+}
+
+impl std::fmt::Display for RequestError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "[{:?}] {:?}: {}", self.kind, self.url, self.message)?;
+        Ok(())
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -40,6 +40,7 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
         chapters: doc
             .select("tbody > tr")
             .map(parse_chapter_list)
+            .map_or(Ok(None), |r| r.map(Some))?
             .unwrap_or_default(),
         ..Default::default()
     };
@@ -85,17 +86,20 @@ pub fn fetch_chapter_content(url: String) -> Result<Option<String>, FensterError
 
     let content = doc
         .select_first(".chapter-content")
-        .map(|node| {
+        .map(|node| -> Result<String, ParseError> {
             let mut out = Vec::new();
-            node.as_node().serialize(&mut out).unwrap();
-            String::from_utf8_lossy(&out).to_string()
+            node.as_node()
+                .serialize(&mut out)
+                .map_err(|_| ParseError::SerializeFailed)?;
+            Ok(String::from_utf8_lossy(&out).to_string())
         })
-        .ok();
+        .ok()
+        .map_or(Ok(None), |r| r.map(Some))?;
 
     Ok(content)
 }
 
-fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Vec<Chapter> {
+fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Result<Vec<Chapter>, FensterError> {
     let mut chapters = vec![];
 
     for tr in nodes {
@@ -128,12 +132,12 @@ fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Vec<Chapter> {
         let chapter = Chapter {
             index: chapters.len() as i32,
             title: link.text_contents().trim().to_string(),
-            url: META.derive_abs_url(url, None),
+            url: META.derive_abs_url(url, None)?,
             updated_at,
         };
 
         chapters.push(chapter);
     }
 
-    chapters
+    Ok(chapters)
 }

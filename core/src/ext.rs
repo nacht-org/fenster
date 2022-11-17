@@ -4,6 +4,8 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+use crate::error::ParseError;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Meta {
     pub id: String,
@@ -16,17 +18,16 @@ pub struct Meta {
 }
 
 impl Meta {
-    pub fn derive_abs_url(&self, mut url: String, current: Option<&str>) -> String {
+    pub fn derive_abs_url(
+        &self,
+        mut url: String,
+        current: Option<&str>,
+    ) -> Result<String, ParseError> {
         if url.starts_with("https://") || url.starts_with("http://") {
-            return url;
+            return Ok(url);
         } else if url.starts_with("//") {
-            // TODO: pass along this possible error.
-            let base_url = Url::parse(match current {
-                Some(v) => v,
-                None => &self.base_urls[0],
-            })
-            .unwrap();
-
+            let base_url = Url::parse(current.unwrap_or(&self.base_urls[0]))
+                .map_err(|_| ParseError::FailedURLParse)?;
             url.insert_str(0, base_url.scheme());
         } else if url.starts_with("/") {
             let base_url = &self.base_urls[0];
@@ -37,7 +38,7 @@ impl Meta {
             url.insert_str(0, base_url);
         }
 
-        return url;
+        Ok(url)
     }
 }
 
