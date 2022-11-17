@@ -1,4 +1,4 @@
-pub use crate::http;
+pub use crate::http::{self, SendRequest};
 pub use crate::mem::*;
 pub use crate::out::set_panic_hook;
 

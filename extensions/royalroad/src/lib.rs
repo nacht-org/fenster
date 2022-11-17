@@ -3,7 +3,7 @@ extern crate fenster_glue;
 
 use chrono::{DateTime, NaiveDateTime, Utc};
 use fenster_core::prelude::*;
-use fenster_glue::{http::SendRequest, prelude::*};
+use fenster_glue::prelude::*;
 use kuchiki::{
     iter::{Descendants, Elements, Select},
     traits::TendrilSink,
@@ -76,6 +76,23 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
     };
 
     Ok(novel)
+}
+
+#[expose]
+pub fn fetch_chapter_content(url: String) -> Result<Option<String>, FensterError> {
+    let response = Request::get(url).send()?;
+    let doc = kuchiki::parse_html().one(response.body.unwrap());
+
+    let content = doc
+        .select_first(".chapter-content")
+        .map(|node| {
+            let mut out = Vec::new();
+            node.as_node().serialize(&mut out).unwrap();
+            String::from_utf8_lossy(&out).to_string()
+        })
+        .ok();
+
+    Ok(content)
 }
 
 fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Vec<Chapter> {
