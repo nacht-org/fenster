@@ -19,6 +19,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Run a given wasm extension
     Run {
         /// The path to the wasm file to be ran
         path: PathBuf,
@@ -28,7 +29,12 @@ enum Commands {
         meta: bool,
     },
 
-    Build,
+    /// Build the extensions
+    Build {
+        /// The output directory for the built extensions
+        #[arg(short, long, default_value = "dist")]
+        out: PathBuf,
+    },
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -59,8 +65,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("{meta:#?}");
             }
         }
-        Commands::Build => {
-            build::build()?;
+        Commands::Build { out } => {
+            build::build(out)?;
         }
     }
 

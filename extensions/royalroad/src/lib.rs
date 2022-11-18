@@ -34,7 +34,7 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
     println!("{}", response.status);
 
     let doc = kuchiki::parse_html().one(response.body.unwrap());
-    println!("parsed doc");
+    // println!("parsed doc");
 
     let volume = Volume {
         chapters: doc
