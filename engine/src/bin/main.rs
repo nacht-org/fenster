@@ -1,6 +1,6 @@
 use fenster_engine::Runner;
 use log::{info, trace, LevelFilter};
-use std::error;
+use std::{error, path::Path};
 
 fn main() -> Result<(), Box<dyn error::Error>> {
     env_logger::builder()
@@ -10,7 +10,9 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         .init();
 
     trace!("initializing the wasm engine...");
-    let mut runner = Runner::new("target/wasm32-unknown-unknown/debug/extension_royalroad.wasm")?;
+    let mut runner = Runner::new(Path::new(
+        "target/wasm32-unknown-unknown/debug/extension_royalroad.wasm",
+    ))?;
 
     // runner.main()?;
 

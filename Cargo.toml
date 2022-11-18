@@ -1,5 +1,5 @@
 [workspace]
-members = ["glue", "glue_derive", "engine", "core", "extensions/royalroad"]
+members = ["cli", "glue", "glue_derive", "engine", "core", "extensions/royalroad"]
 
 [profile.release]
 opt-level = "z"

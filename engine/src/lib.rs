@@ -1,6 +1,6 @@
 use fenster_core::prelude::*;
 use log::{debug, info, trace};
-use std::{error, slice, str::FromStr};
+use std::{error, path::Path, slice, str::FromStr};
 use wasmtime::*;
 
 pub fn ext_print(mut caller: Caller<'_, ()>, ptr: i32) {
@@ -154,7 +154,7 @@ struct Functions {
 }
 
 impl Runner {
-    pub fn new(path: &str) -> Result<Self, Box<dyn error::Error>> {
+    pub fn new(path: &Path) -> Result<Self, Box<dyn error::Error>> {
         let engine = Engine::default();
         let mut linker = Linker::new(&engine);
         let module = Module::from_file(&engine, path)?;
