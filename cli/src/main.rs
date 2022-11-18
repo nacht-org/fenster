@@ -1,4 +1,5 @@
 mod build;
+mod lock;
 
 use std::path::PathBuf;
 
@@ -35,6 +36,8 @@ enum Commands {
         #[arg(short, long, default_value = "dist")]
         out: PathBuf,
     },
+
+    Lock,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -67,6 +70,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Build { out } => {
             build::build(out)?;
+        }
+        Commands::Lock => {
+            lock::lock()?;
         }
     }
 
