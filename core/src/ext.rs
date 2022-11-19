@@ -11,7 +11,7 @@ pub struct Meta {
     pub id: String,
     pub name: String,
     pub lang: String,
-    pub version: [usize; 3],
+    pub version: String,
     pub base_urls: Vec<String>,
     pub rds: Vec<ReadingDirection>,
     pub attrs: Vec<Attribute>,

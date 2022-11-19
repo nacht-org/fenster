@@ -15,7 +15,7 @@ lazy_static! {
         id: String::from("com.scribblehub"),
         name: String::from("ScribbleHub"),
         lang: String::from("en"),
-        version: [0, 1, 0],
+        version: String::from(env!("CARGO_PKG_VERSION")),
         base_urls: vec![String::from("https://www.scribblehub.com")],
         rds: vec![ReadingDirection::Ltr],
         attrs: vec![],

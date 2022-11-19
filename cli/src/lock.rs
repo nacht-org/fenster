@@ -5,7 +5,6 @@ use std::{
 
 use anyhow::{anyhow, bail};
 use fenster_engine::Runner;
-use itertools::Itertools;
 use serde::Serialize;
 
 #[derive(Serialize, Debug)]
@@ -37,7 +36,7 @@ pub fn lock() -> anyhow::Result<()> {
 
         let extension = Extension {
             name: meta.name,
-            version: meta.version.into_iter().join("."),
+            version: meta.version,
             base_urls: meta.base_urls,
             lang: meta.lang,
             path: entry.path().as_os_str().to_string_lossy().to_string(),
