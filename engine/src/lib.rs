@@ -1,6 +1,9 @@
+pub mod error;
+
+use error::Error;
 use fenster_core::prelude::*;
 use log::{debug, info, trace};
-use std::{error, path::Path, slice, str::FromStr};
+use std::{path::Path, slice, str::FromStr};
 use wasmtime::*;
 
 pub fn ext_print(mut caller: Caller<'_, ()>, ptr: i32) {
@@ -154,7 +157,7 @@ struct Functions {
 }
 
 impl Runner {
-    pub fn new(path: &Path) -> Result<Self, Box<dyn error::Error>> {
+    pub fn new(path: &Path) -> crate::error::Result<Self> {
         let engine = Engine::default();
         let mut linker = Linker::new(&engine);
         let module = Module::from_file(&engine, path)?;
@@ -200,7 +203,7 @@ impl Runner {
         })
     }
 
-    pub fn main(&mut self) -> Result<(), Box<dyn error::Error>> {
+    pub fn main(&mut self) -> crate::error::Result<()> {
         let main_fn = self
             .instance
             .get_func(&mut self.store, "main")
@@ -211,11 +214,11 @@ impl Runner {
         Ok(())
     }
 
-    pub fn meta(&mut self) -> Result<Meta, Box<dyn error::Error>> {
+    pub fn meta(&mut self) -> Result<Meta, crate::error::Error> {
         let ptr = self.functions.meta.call(&mut self.store, ())?;
 
         let bytes = self.read_bytes(ptr)?;
-        let meta = serde_json::from_slice(bytes)?;
+        let meta = serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError)?;
 
         let len = bytes.len() as i32;
         self.dealloc_memory(ptr, len)?;
@@ -223,24 +226,21 @@ impl Runner {
         Ok(meta)
     }
 
-    pub fn fetch_novel(&mut self, url: &str) -> Result<Novel, Box<dyn error::Error>> {
+    pub fn fetch_novel(&mut self, url: &str) -> crate::error::Result<Novel> {
         let iptr = self.write_string(url)?;
         let rptr = self.functions.fetch_novel.call(&mut self.store, iptr)?;
 
         let bytes = self.read_bytes(rptr)?;
-        let result: Result<Novel, FensterError> = serde_json::from_slice(bytes)?;
+        let result: Result<Novel, FensterError> =
+            serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError)?;
 
         let len = bytes.len() as i32;
         self.dealloc_memory(rptr, len)?;
 
-        // TODO: temporary measure until errors are handled better.
-        Ok(result.unwrap())
+        result.map_err(|e| e.into())
     }
 
-    pub fn fetch_chapter_content(
-        &mut self,
-        url: &str,
-    ) -> Result<Option<String>, Box<dyn error::Error>> {
+    pub fn fetch_chapter_content(&mut self, url: &str) -> crate::error::Result<Option<String>> {
         let iptr = self.write_string(url)?;
         let rptr = self
             .functions
@@ -248,16 +248,16 @@ impl Runner {
             .call(&mut self.store, iptr)?;
 
         let bytes = self.read_bytes(rptr)?;
-        let result: Result<Option<String>, FensterError> = serde_json::from_slice(bytes)?;
+        let result: Result<Option<String>, FensterError> =
+            serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError)?;
 
         let len = bytes.len() as i32;
         self.dealloc_memory(rptr, len)?;
 
-        // TODO: temporary measure until errors are handled better.
-        Ok(result.unwrap())
+        result.map_err(|e| e.into())
     }
 
-    fn read_bytes(&mut self, offset: i32) -> Result<&[u8], Box<dyn error::Error>> {
+    fn read_bytes(&mut self, offset: i32) -> crate::error::Result<&[u8]> {
         let len = self.stack_pop()? as usize;
 
         let value = unsafe {
@@ -269,7 +269,7 @@ impl Runner {
         Ok(value)
     }
 
-    fn write_string(&mut self, value: &str) -> Result<i32, Box<dyn error::Error>> {
+    fn write_string(&mut self, value: &str) -> crate::error::Result<i32> {
         // length of the string with trailing null byte
         let ptr = self.alloc_memory(value.len() as i32)?;
         self.stack_push(value.len() as i32)?;
@@ -281,28 +281,28 @@ impl Runner {
         Ok(ptr)
     }
 
-    fn alloc_memory(&mut self, len: i32) -> Result<i32, Box<dyn error::Error>> {
+    fn alloc_memory(&mut self, len: i32) -> crate::error::Result<i32> {
         self.functions
             .alloc
             .call(&mut self.store, len)
             .map_err(|e| e.into())
     }
 
-    fn dealloc_memory(&mut self, ptr: i32, len: i32) -> Result<(), Box<dyn error::Error>> {
+    fn dealloc_memory(&mut self, ptr: i32, len: i32) -> crate::error::Result<()> {
         self.functions
             .dealloc
             .call(&mut self.store, (ptr, len))
             .map_err(|e| e.into())
     }
 
-    fn stack_push(&mut self, size: i32) -> Result<(), Box<dyn error::Error>> {
+    fn stack_push(&mut self, size: i32) -> crate::error::Result<()> {
         self.functions
             .stack_push
             .call(&mut self.store, size)
             .map_err(|e| e.into())
     }
 
-    fn stack_pop(&mut self) -> Result<i32, Box<dyn error::Error>> {
+    fn stack_pop(&mut self) -> crate::error::Result<i32> {
         self.functions
             .stack_pop
             .call(&mut self.store, ())
