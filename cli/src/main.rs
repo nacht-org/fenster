@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 use fenster_engine::Runner;
 use simplelog::{Config, LevelFilter, TermLogger};
+use url::Url;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -28,6 +29,10 @@ enum Commands {
         /// Print the meta information of the source
         #[arg(short, long)]
         meta: bool,
+
+        /// Fetch and print the novel information
+        #[arg(short, long)]
+        novel: Option<Url>,
     },
 
     /// Build the extensions
@@ -60,12 +65,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .unwrap();
 
     match cli.command {
-        Commands::Run { path, meta } => {
+        Commands::Run { path, meta, novel } => {
             let mut runner = Runner::new(&path)?;
 
             if meta {
                 let meta = runner.meta()?;
                 println!("{meta:#?}");
+            }
+
+            if let Some(url) = novel {
+                let novel = runner.fetch_novel(url.as_str())?;
+                println!("{novel:#?}");
             }
         }
         Commands::Build { out } => {
