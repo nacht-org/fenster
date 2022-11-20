@@ -33,6 +33,10 @@ enum Commands {
         /// Fetch and print the novel information
         #[arg(short, long)]
         novel: Option<Url>,
+
+        /// Fetch and print the chapter content
+        #[arg(short, long)]
+        content: Option<Url>,
     },
 
     /// Build the extensions
@@ -65,7 +69,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .unwrap();
 
     match cli.command {
-        Commands::Run { path, meta, novel } => {
+        Commands::Run {
+            path,
+            meta,
+            novel,
+            content,
+        } => {
             let mut runner = Runner::new(&path)?;
 
             if meta {
@@ -76,6 +85,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(url) = novel {
                 let novel = runner.fetch_novel(url.as_str())?;
                 println!("{novel:#?}");
+            }
+
+            if let Some(url) = content {
+                let content = runner.fetch_chapter_content(url.as_str())?;
+                println!("{content:#?}");
             }
         }
         Commands::Build { out } => {
