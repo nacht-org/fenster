@@ -46,7 +46,11 @@ enum Commands {
         out: PathBuf,
     },
 
-    Lock,
+    Lock {
+        /// The directory to find wasm extensions
+        #[arg(short, long, default_value = "dist")]
+        dir: PathBuf,
+    },
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -95,8 +99,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Build { out } => {
             build::build(out)?;
         }
-        Commands::Lock => {
-            lock::lock()?;
+        Commands::Lock { dir } => {
+            lock::lock(dir)?;
         }
     }
 

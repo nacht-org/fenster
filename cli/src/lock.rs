@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     ffi::OsStr,
     fs::{self, File},
+    path::PathBuf,
 };
 
 use anyhow::{anyhow, bail};
@@ -24,10 +25,10 @@ struct Extension {
     pub path: String,
 }
 
-pub fn lock() -> anyhow::Result<()> {
+pub fn lock(dir: PathBuf) -> anyhow::Result<()> {
     let mut extensions = HashMap::new();
 
-    for entry in fs::read_dir("dist")? {
+    for entry in fs::read_dir(&dir)? {
         let entry = entry?;
         let path = entry.path();
 
@@ -69,6 +70,8 @@ pub fn lock() -> anyhow::Result<()> {
 
         serde_json::to_writer_pretty(&mut file, &lock)?;
     }
+
+    info!("generated lock file at 'dist/lock.json'");
 
     Ok(())
 }
