@@ -1,10 +1,12 @@
 use std::{
     collections::HashMap,
+    ffi::OsStr,
     fs::{self, File},
 };
 
 use anyhow::{anyhow, bail};
 use fenster_engine::Runner;
+use log::{debug, info};
 use serde::Serialize;
 
 #[derive(Serialize, Debug)]
@@ -27,7 +29,15 @@ pub fn lock() -> anyhow::Result<()> {
 
     for entry in fs::read_dir("dist")? {
         let entry = entry?;
-        let mut runner = Runner::new(&entry.path()).map_err(|e| anyhow!(e.to_string()))?;
+        let path = entry.path();
+
+        if path.extension() != Some(OsStr::new("wasm")) {
+            debug!("skipped non-wasm file '{}'", path.display());
+            continue;
+        }
+
+        info!("collecting meta info from '{}'...", path.display());
+        let mut runner = Runner::new(&path).map_err(|e| anyhow!(e.to_string()))?;
         let meta = runner.meta().map_err(|e| anyhow!(e.to_string()))?;
 
         if let Some(Extension { name, .. }) = extensions.get(&meta.id) {
@@ -52,8 +62,9 @@ pub fn lock() -> anyhow::Result<()> {
 
     {
         let mut file = File::options()
-            .write(true)
             .create(true)
+            .write(true)
+            .truncate(true)
             .open("dist/lock.json")?;
 
         serde_json::to_writer_pretty(&mut file, &lock)?;
