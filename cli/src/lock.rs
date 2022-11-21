@@ -8,16 +8,16 @@ use std::{
 use anyhow::{anyhow, bail};
 use fenster_engine::Runner;
 use log::{debug, info};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Debug)]
-struct Lock {
-    version: usize,
-    extensions: HashMap<String, Extension>,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Lock {
+    pub version: usize,
+    pub extensions: HashMap<String, Extension>,
 }
 
-#[derive(Serialize, Debug)]
-struct Extension {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Extension {
     pub name: String,
     pub version: String,
     pub base_urls: Vec<String>,

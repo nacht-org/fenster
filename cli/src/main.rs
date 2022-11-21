@@ -1,10 +1,11 @@
 mod build;
 mod lock;
 
-use std::path::PathBuf;
+use std::{fs::File, io::BufReader, path::PathBuf};
 
 use clap::{Parser, Subcommand};
 use fenster_engine::Runner;
+use lock::Lock;
 use simplelog::{Config, LevelFilter, TermLogger};
 use url::Url;
 
@@ -51,6 +52,14 @@ enum Commands {
         #[arg(short, long, default_value = "dist")]
         dir: PathBuf,
     },
+
+    Detect {
+        url: Url,
+
+        /// The path to the lock file
+        #[arg(short, long, default_value = "dist/lock.json")]
+        lock: PathBuf,
+    },
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -94,6 +103,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(url) = content {
                 let content = runner.fetch_chapter_content(url.as_str())?;
                 println!("{content:#?}");
+            }
+        }
+        Commands::Detect { url, lock } => {
+            let file = File::open(lock)?;
+            let lock: Lock = serde_json::from_reader(BufReader::new(file))?;
+
+            let extension = lock
+                .extensions
+                .into_iter()
+                .map(|(_, e)| e)
+                .find(|e| e.base_urls.iter().any(|bu| url.as_str().starts_with(bu)));
+
+            match extension {
+                Some(extension) => println!("{extension:#?}"),
+                None => println!("No source matching '{url}' found"),
             }
         }
         Commands::Build { out } => {
