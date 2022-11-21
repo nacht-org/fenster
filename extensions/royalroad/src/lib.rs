@@ -12,11 +12,11 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     static ref META: Meta = Meta {
-        id: String::from("com.scribblehub"),
-        name: String::from("ScribbleHub"),
+        id: String::from("com.royalroad"),
+        name: String::from("RoyalRoad"),
         lang: String::from("en"),
         version: String::from(env!("CARGO_PKG_VERSION")),
-        base_urls: vec![String::from("https://www.scribblehub.com")],
+        base_urls: vec![String::from("https://www.royalroad.com")],
         rds: vec![ReadingDirection::Ltr],
         attrs: vec![],
     };
