@@ -173,7 +173,10 @@ impl Runner {
         linker.func_wrap("env", "ext_trace", ext_trace)?;
 
         let data = Data {
-            client: Client::new(),
+            client: Client::builder()
+                .user_agent("Mozilla/5.0 (X11; Fedora; Linux x86_64; rv:107.0) Gecko/20100101 Firefox/107.0")
+                .build()
+                .unwrap(),
         };
 
         let mut store = Store::new(&engine, data);
