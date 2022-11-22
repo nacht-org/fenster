@@ -3,10 +3,15 @@ pub mod error;
 use error::Error;
 use fenster_core::prelude::*;
 use log::{debug, info, trace};
+use reqwest::blocking::Client;
 use std::{path::Path, slice, str::FromStr};
 use wasmtime::*;
 
-pub fn ext_print(mut caller: Caller<'_, ()>, ptr: i32) {
+pub struct Data {
+    client: Client,
+}
+
+pub fn ext_print(mut caller: Caller<'_, Data>, ptr: i32) {
     trace!("executing exposed function 'ext_print'");
 
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
@@ -14,7 +19,7 @@ pub fn ext_print(mut caller: Caller<'_, ()>, ptr: i32) {
     print!("{string}");
 }
 
-pub fn ext_eprint(mut caller: Caller<'_, ()>, ptr: i32) {
+pub fn ext_eprint(mut caller: Caller<'_, Data>, ptr: i32) {
     trace!("executing exposed function 'ext_eprint'");
 
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
@@ -22,7 +27,7 @@ pub fn ext_eprint(mut caller: Caller<'_, ()>, ptr: i32) {
     eprint!("{string}");
 }
 
-pub fn ext_trace(mut caller: Caller<'_, ()>, ptr: i32) {
+pub fn ext_trace(mut caller: Caller<'_, Data>, ptr: i32) {
     trace!("executing exposed function 'ext_trace'");
 
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
@@ -30,7 +35,7 @@ pub fn ext_trace(mut caller: Caller<'_, ()>, ptr: i32) {
     eprintln!("{string}");
 }
 
-pub fn ext_send_request(mut caller: Caller<'_, ()>, ptr: i32) -> i32 {
+pub fn ext_send_request(mut caller: Caller<'_, Data>, ptr: i32) -> i32 {
     trace!("executing exposed function 'ext_send_request'");
 
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
@@ -39,7 +44,7 @@ pub fn ext_send_request(mut caller: Caller<'_, ()>, ptr: i32) -> i32 {
     let request = serde_json::from_str::<Request>(request).unwrap();
     println!("{request:?}");
 
-    let client = reqwest::blocking::Client::new();
+    let client = &caller.data().client;
     let response = client.execute(reqwest::blocking::Request::new(
         reqwest::Method::GET,
         reqwest::Url::from_str(&request.url).unwrap(),
@@ -74,7 +79,7 @@ fn parse_response(
     })
 }
 
-fn read_string<'c, 'm>(caller: &'c mut Caller<'_, ()>, memory: &'m Memory, ptr: i32) -> &'m str {
+fn read_string<'c, 'm>(caller: &'c mut Caller<'_, Data>, memory: &'m Memory, ptr: i32) -> &'m str {
     info!("reading string from wasm memory");
 
     let len = stack_pop(caller) as usize;
@@ -87,7 +92,7 @@ fn read_string<'c, 'm>(caller: &'c mut Caller<'_, ()>, memory: &'m Memory, ptr: 
     }
 }
 
-fn write_string<'c, 'm>(caller: &'c mut Caller<'_, ()>, memory: &'m Memory, value: &str) -> i32 {
+fn write_string<'c, 'm>(caller: &'c mut Caller<'_, Data>, memory: &'m Memory, value: &str) -> i32 {
     let alloc_func = caller.get_export("alloc").unwrap().into_func().unwrap();
 
     let ptr = alloc_func
@@ -105,7 +110,7 @@ fn write_string<'c, 'm>(caller: &'c mut Caller<'_, ()>, memory: &'m Memory, valu
     ptr
 }
 
-fn stack_push<'c, 'm>(caller: &'c mut Caller<'_, ()>, value: i32) {
+fn stack_push<'c, 'm>(caller: &'c mut Caller<'_, Data>, value: i32) {
     let push_fn = caller
         .get_export("stack_push")
         .unwrap()
@@ -119,7 +124,7 @@ fn stack_push<'c, 'm>(caller: &'c mut Caller<'_, ()>, value: i32) {
         .unwrap();
 }
 
-fn stack_pop<'c, 'm>(caller: &'c mut Caller<'_, ()>) -> i32 {
+fn stack_pop<'c, 'm>(caller: &'c mut Caller<'_, Data>) -> i32 {
     let pop_fn = caller.get_export("stack_pop").unwrap().into_func().unwrap();
 
     let value = pop_fn
@@ -135,7 +140,7 @@ fn stack_pop<'c, 'm>(caller: &'c mut Caller<'_, ()>) -> i32 {
 pub struct Runner {
     engine: Engine,
     module: Module,
-    store: Store<()>,
+    store: Store<Data>,
     instance: Instance,
     memory: Memory,
     functions: Functions,
@@ -159,7 +164,7 @@ struct Functions {
 impl Runner {
     pub fn new(path: &Path) -> crate::error::Result<Self> {
         let engine = Engine::default();
-        let mut linker = Linker::new(&engine);
+        let mut linker: Linker<Data> = Linker::new(&engine);
         let module = Module::from_file(&engine, path)?;
 
         linker.func_wrap("env", "ext_send_request", ext_send_request)?;
@@ -167,7 +172,11 @@ impl Runner {
         linker.func_wrap("env", "ext_eprint", ext_eprint)?;
         linker.func_wrap("env", "ext_trace", ext_trace)?;
 
-        let mut store = Store::new(&engine, ());
+        let data = Data {
+            client: Client::new(),
+        };
+
+        let mut store = Store::new(&engine, data);
 
         let instance = linker.instantiate(&mut store, &module)?;
         let memory = instance
