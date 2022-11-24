@@ -240,6 +240,37 @@ fn toc_url(current: &str, page: usize) -> String {
 }
 
 #[expose]
-pub fn fetch_chapter_content(url: String) -> Result<(), FensterError> {
-    Ok(())
+pub fn fetch_chapter_content(url: String) -> Result<String, FensterError> {
+    let response = Request::get(url).send()?;
+    let doc = kuchiki::parse_html().one(response.body.unwrap());
+
+    let content = doc
+        .select_first("#chapter-container")
+        .map_err(|_| ParseError::ElementNotFound)?;
+
+    remove_select(&doc, ".adsbox, .adsbygoogle");
+    remove_select(&doc, "strong > strong");
+    remove_select(&doc, "strong i i");
+    remove_select(&doc, "p > sub");
+
+    let mut output = Vec::new();
+    content
+        .as_node()
+        .serialize(&mut output)
+        .map_err(|_| ParseError::SerializeFailed)?;
+
+    Ok(String::from_utf8_lossy(&output).to_string())
+}
+
+fn remove_select(doc: &NodeRef, selector: &str) {
+    let nodes = doc
+        .select(selector)
+        .map(|nodes| nodes.collect::<Vec<_>>())
+        .ok();
+
+    if let Some(nodes) = nodes {
+        for node in nodes {
+            node.as_node().detach();
+        }
+    }
 }
