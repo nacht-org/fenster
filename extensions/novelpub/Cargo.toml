@@ -1,0 +1,20 @@
+[package]
+name = "extension_novelpub"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ['cdylib']
+
+[dependencies]
+fenster_core = { path = "../../core" }
+fenster_glue = { path = "../../glue" }
+kuchiki = "0.8.1"
+lazy_static = "1.4.0"
+serde_json = "1.0.87"
+
+[dependencies.chrono]
+version = "0.4.22"
+default-features = false
+features = ["clock", "iana-time-zone", "oldtime", "std", "time", "serde"]

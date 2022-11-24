@@ -12,7 +12,7 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     static ref META: Meta = Meta {
-        id: String::from("com.royalroad"),
+        id: String::from("en.royalroad"),
         name: String::from("RoyalRoad"),
         lang: String::from("en"),
         version: String::from(env!("CARGO_PKG_VERSION")),
@@ -63,6 +63,10 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
             .select(r#".description > [property="description"] > p"#)
             .map(|nodes| nodes.map(|node| node.text_contents()).collect::<Vec<_>>())
             .unwrap_or(vec![]),
+        status: doc
+            .select_first(".widget_fic_similar > li:last-child > span:last-child")
+            .map(|node| node.text_contents().as_str().into())
+            .unwrap_or_default(),
         lang: META.lang.to_string(),
         volumes: vec![volume],
         metadata: doc

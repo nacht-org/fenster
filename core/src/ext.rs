@@ -62,6 +62,7 @@ pub struct Novel {
     pub desc: Vec<String>,
     pub volumes: Vec<Volume>,
     pub metadata: Vec<Metadata>,
+    pub status: NovelStatus,
     pub lang: String,
 }
 
@@ -151,5 +152,27 @@ impl From<NaiveDateTime> for TaggedDateTime {
     #[inline]
     fn from(value: NaiveDateTime) -> Self {
         Self::Local(value)
+    }
+}
+
+#[derive(Serialize, Deserialize, Default, Debug)]
+pub enum NovelStatus {
+    Ongoing,
+    Hiatus,
+    Completed,
+    Stub,
+    #[default]
+    Unknown,
+}
+
+impl From<&str> for NovelStatus {
+    fn from(value: &str) -> Self {
+        match value.to_ascii_lowercase().as_str() {
+            "ongoing" => NovelStatus::Ongoing,
+            "hiatus" => NovelStatus::Hiatus,
+            "completed" => NovelStatus::Completed,
+            "stub" => NovelStatus::Stub,
+            _ => NovelStatus::Unknown,
+        }
     }
 }

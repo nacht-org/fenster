@@ -1,3 +1,5 @@
+use std::num::ParseIntError;
+
 use serde::{Deserialize, Serialize};
 
 use crate::http::BoxedRequestError;
@@ -21,4 +23,13 @@ pub enum ParseError {
 
     #[error("failed to parse url")]
     FailedURLParse,
+
+    #[error("failed to parse int from str")]
+    ParseIntError,
+}
+
+impl From<ParseIntError> for FensterError {
+    fn from(_: ParseIntError) -> Self {
+        FensterError::ParseFailed(ParseError::ParseIntError)
+    }
 }
