@@ -50,7 +50,10 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
     }
 
     let novel = Novel {
-        title: doc.select_first_text(".novel-title"),
+        title: doc
+            .select_first(".novel-title")
+            .map(|node| node.text_contents().trim().to_string())
+            .map_err(|_| ParseError::ElementNotFound)?,
         authors: doc.select_text(".author a"),
         desc: doc.select_text(".summary .content p"),
         thumb: doc.select_first(".cover img").get_attribute("data-src"),

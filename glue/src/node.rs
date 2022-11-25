@@ -1,17 +1,11 @@
+use fenster_core::prelude::FensterError;
 use kuchiki::{ElementData, NodeDataRef, NodeRef};
 
 pub trait SelectText {
-    fn select_first_text(&self, selectors: &str) -> String;
     fn select_text(&self, selectors: &str) -> Vec<String>;
 }
 
 impl SelectText for NodeRef {
-    fn select_first_text(&self, selectors: &str) -> String {
-        self.select_first(selectors)
-            .map(|node| node.text_contents().trim().to_string())
-            .unwrap_or_default()
-    }
-
     fn select_text(&self, selectors: &str) -> Vec<String> {
         self.select(selectors)
             .map(|nodes| {
