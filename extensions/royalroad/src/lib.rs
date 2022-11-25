@@ -40,7 +40,7 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
         chapters: doc
             .select("tbody > tr")
             .map(parse_chapter_list)
-            .map_or(Ok(None), |r| r.map(Some))?
+            .map_err(|_| ParseError::ElementNotFound)?
             .unwrap_or_default(),
         ..Default::default()
     };
@@ -98,7 +98,7 @@ pub fn fetch_chapter_content(url: String) -> Result<Option<String>, FensterError
             Ok(String::from_utf8_lossy(&out).to_string())
         })
         .ok()
-        .map_or(Ok(None), |r| r.map(Some))?;
+        .transpose()?;
 
     Ok(content)
 }

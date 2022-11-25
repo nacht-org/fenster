@@ -50,38 +50,10 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
     }
 
     let novel = Novel {
-        title: doc
-            .select_first(".novel-title")
-            .map(|node| node.text_contents().trim().to_string())
-            .unwrap_or_default(),
-        authors: doc
-            .select(".author a")
-            .map(|nodes| {
-                nodes
-                    .into_iter()
-                    .map(|node| node.text_contents().trim().to_string())
-                    .collect()
-            })
-            .unwrap_or_default(),
-        desc: doc
-            .select(".summary .content p")
-            .map(|nodes| {
-                nodes
-                    .into_iter()
-                    .map(|node| node.text_contents().trim().to_string())
-                    .collect()
-            })
-            .unwrap_or_default(),
-        thumb: doc
-            .select_first(".cover img")
-            .map(|node| {
-                node.attributes
-                    .borrow()
-                    .get("data-src")
-                    .map(|v| v.to_string())
-            })
-            .ok()
-            .flatten(),
+        title: doc.select_first_text(".novel-title"),
+        authors: doc.select_text(".author a"),
+        desc: doc.select_text(".summary .content p"),
+        thumb: doc.select_first(".cover img").get_attribute("data-src"),
         status,
         volumes: collect_toc(&url)?,
         metadata: collect_metadata(&doc),
@@ -185,7 +157,7 @@ fn extract_toc(doc: &NodeRef, volume: &mut Volume) -> Result<(), FensterError> {
             .borrow()
             .get("data-orderno")
             .map(|v| v.parse::<i32>())
-            .map_or(Ok(None), |r| r.map(Some))?
+            .transpose()?
             .unwrap_or_default();
 
         let url = a
