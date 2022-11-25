@@ -3,7 +3,7 @@ extern crate fenster_glue;
 
 use std::collections::HashMap;
 
-use chrono::DateTime;
+use chrono::{DateTime, NaiveDateTime};
 use fenster_core::prelude::*;
 use fenster_glue::prelude::*;
 use kuchiki::{traits::TendrilSink, NodeRef};
@@ -200,8 +200,8 @@ fn extract_toc(doc: &NodeRef, volume: &mut Volume) -> Result<(), FensterError> {
             .select_first("time")
             .map(|node| {
                 node.attributes.borrow().get("datetime").map(|s| {
-                    DateTime::parse_from_rfc3339(s)
-                        .map(|date| TaggedDateTime::Local(date.naive_utc()))
+                    NaiveDateTime::parse_from_str(s, "%F %R")
+                        .map(TaggedDateTime::Local)
                         .ok()
                 })
             })
