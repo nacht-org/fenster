@@ -3,7 +3,7 @@ extern crate fenster_glue;
 
 use std::collections::HashMap;
 
-use chrono::{DateTime, NaiveDateTime};
+use chrono::NaiveDateTime;
 use fenster_core::prelude::*;
 use fenster_glue::prelude::*;
 use kuchiki::{traits::TendrilSink, NodeRef};
