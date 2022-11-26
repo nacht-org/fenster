@@ -50,10 +50,7 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
     }
 
     let novel = Novel {
-        title: doc
-            .select_first(".novel-title")
-            .map(|node| node.text_contents().trim().to_string())
-            .map_err(|_| ParseError::ElementNotFound)?,
+        title: doc.select_first(".novel-title").get_text()?,
         authors: doc.select_text(".author a"),
         desc: doc.select_text(".summary .content p"),
         thumb: doc.select_first(".cover img").get_attribute("data-src"),
@@ -83,7 +80,7 @@ fn collect_metadata(doc: &NodeRef) -> Vec<Metadata> {
         for genre in genres {
             metadata.push(Metadata::new(
                 String::from("subject"),
-                genre.text_contents().trim().to_string(),
+                genre.get_text(),
                 None,
             ));
         }
@@ -92,11 +89,7 @@ fn collect_metadata(doc: &NodeRef) -> Vec<Metadata> {
     let tags = doc.select(".content .tag").ok();
     if let Some(tags) = tags {
         for tag in tags {
-            metadata.push(Metadata::new(
-                String::from("tag"),
-                tag.text_contents().trim().to_string(),
-                None,
-            ));
+            metadata.push(Metadata::new(String::from("tag"), tag.get_text(), None));
         }
     }
 
@@ -163,12 +156,7 @@ fn extract_toc(doc: &NodeRef, volume: &mut Volume) -> Result<(), FensterError> {
             .transpose()?
             .unwrap_or_default();
 
-        let url = a
-            .attributes
-            .borrow()
-            .get("href")
-            .map(|s| s.to_string())
-            .unwrap_or_default();
+        let url = a.get_attribute("href").unwrap_or_default();
 
         let updated_at = li
             .as_node()

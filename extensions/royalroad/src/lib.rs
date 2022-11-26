@@ -31,10 +31,7 @@ pub fn meta() -> &'static Meta {
 #[expose]
 pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
     let response = Request::get(url.clone()).send()?;
-    println!("{}", response.status);
-
     let doc = kuchiki::parse_html().one(response.body.unwrap());
-    // println!("parsed doc");
 
     let volume = Volume {
         chapters: doc
@@ -45,24 +42,15 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
         ..Default::default()
     };
 
+    let author = doc.select_first("span[property='name']").get_text()?;
+
     let novel = Novel {
-        title: doc
-            .select_first("h1[property=\"name\"]")
-            .map(|node| node.text_contents().trim().to_string())
-            .unwrap_or_default(),
-        authors: vec![doc
-            .select_first(r#"span[property="name"]"#)
-            .map(|node| node.text_contents().trim().to_string())
-            .unwrap_or_default()],
+        title: doc.select_first("h1[property='name']").get_text()?,
+        authors: vec![author],
         thumb: doc
             .select_first(".page-content-inner .thumbnail")
-            .map(|node| node.attributes.borrow().get("src").map(|s| s.to_string()))
-            .ok()
-            .flatten(),
-        desc: doc
-            .select(r#".description > [property="description"] > p"#)
-            .map(|nodes| nodes.map(|node| node.text_contents()).collect::<Vec<_>>())
-            .unwrap_or(vec![]),
+            .get_attribute("src"),
+        desc: doc.select_text(r#".description > [property="description"] > p"#),
         status: doc
             .select_first(".widget_fic_similar > li:last-child > span:last-child")
             .map(|node| node.text_contents().as_str().into())

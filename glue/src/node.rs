@@ -1,5 +1,32 @@
-use fenster_core::prelude::FensterError;
+use fenster_core::prelude::ParseError;
 use kuchiki::{ElementData, NodeDataRef, NodeRef};
+
+pub trait GetText {
+    type Output;
+    fn get_text(&self) -> Self::Output;
+}
+
+impl GetText for NodeDataRef<ElementData> {
+    type Output = String;
+
+    #[inline]
+    fn get_text(&self) -> Self::Output {
+        self.text_contents().trim().to_string()
+    }
+}
+
+impl<T> GetText for Result<T, ()>
+where
+    T: GetText,
+{
+    type Output = Result<T::Output, ParseError>;
+
+    fn get_text(&self) -> Self::Output {
+        self.as_ref()
+            .map(T::get_text)
+            .map_err(|_| ParseError::ElementNotFound)
+    }
+}
 
 pub trait SelectText {
     fn select_text(&self, selectors: &str) -> Vec<String>;

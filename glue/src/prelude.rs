@@ -1,6 +1,6 @@
 pub use crate::http::{self, SendRequest};
 pub use crate::mem::*;
-pub use crate::node::{GetAttribute, SelectText, Transpose};
+pub use crate::node::{GetAttribute, GetText, SelectText, Transpose};
 pub use crate::out::set_panic_hook;
 
 // Re-export proc expose
