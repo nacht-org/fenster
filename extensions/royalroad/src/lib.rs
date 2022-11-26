@@ -78,13 +78,7 @@ pub fn fetch_chapter_content(url: String) -> Result<Option<String>, FensterError
 
     let content = doc
         .select_first(".chapter-content")
-        .map(|node| -> Result<String, ParseError> {
-            let mut out = Vec::new();
-            node.as_node()
-                .serialize(&mut out)
-                .map_err(|_| ParseError::SerializeFailed)?;
-            Ok(String::from_utf8_lossy(&out).to_string())
-        })
+        .map(|node| node.as_node().outer_html())
         .ok()
         .transpose()?;
 

@@ -172,17 +172,8 @@ fn extract_toc(doc: &NodeRef, volume: &mut Volume) -> Result<(), FensterError> {
             .flatten()
             .flatten();
 
-        let chapter_no = a
-            .as_node()
-            .select_first(".chapter-no")
-            .map(|node| node.text_contents())
-            .unwrap_or_default();
-
-        let chapter_title = a
-            .as_node()
-            .select_first(".chapter-title")
-            .map(|node| node.text_contents())
-            .unwrap_or_default();
+        let chapter_no = a.as_node().select_first(".chapter-no").get_text()?;
+        let chapter_title = a.as_node().select_first(".chapter-title").get_text()?;
 
         let chapter = Chapter {
             index,
@@ -216,13 +207,7 @@ pub fn fetch_chapter_content(url: String) -> Result<String, FensterError> {
     remove_select(&doc, "strong i i");
     remove_select(&doc, "p > sub");
 
-    let mut output = Vec::new();
-    content
-        .as_node()
-        .serialize(&mut output)
-        .map_err(|_| ParseError::SerializeFailed)?;
-
-    Ok(String::from_utf8_lossy(&output).to_string())
+    content.as_node().outer_html().map_err(Into::into)
 }
 
 fn remove_select(doc: &NodeRef, selector: &str) {

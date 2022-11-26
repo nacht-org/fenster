@@ -28,6 +28,19 @@ where
     }
 }
 
+pub trait OuterHtml {
+    fn outer_html(&self) -> Result<String, ParseError>;
+}
+
+impl OuterHtml for NodeRef {
+    fn outer_html(&self) -> Result<String, ParseError> {
+        let mut out = Vec::new();
+        self.serialize(&mut out)
+            .map_err(|_| ParseError::SerializeFailed)?;
+        Ok(String::from_utf8_lossy(&out).to_string())
+    }
+}
+
 pub trait SelectText {
     fn select_text(&self, selectors: &str) -> Vec<String>;
 }
