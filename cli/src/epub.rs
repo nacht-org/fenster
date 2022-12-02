@@ -26,5 +26,15 @@ pub fn compile_epub(url: Url, wasm_path: PathBuf) -> anyhow::Result<()> {
     let file = BufWriter::new(file);
     serde_json::to_writer_pretty(file, &novel)?;
 
+    for volume in novel.volumes {
+        for chapter in &volume.chapters[0..10] {
+            let content = runner.fetch_chapter_content(&chapter.url)?;
+            let Some(content) = content else { continue };
+
+            let file = data_dir.join(format!("v{}c{}.html", volume.index, chapter.index));
+            fs::write(file, content)?;
+        }
+    }
+
     Ok(())
 }
