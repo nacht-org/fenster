@@ -50,7 +50,9 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
         thumb: doc
             .select_first(".page-content-inner .thumbnail")
             .get_attribute("src"),
-        desc: doc.select_text(r#".description > [property="description"] > p"#),
+        desc: doc
+            .select(r#".description > [property="description"] > p"#)
+            .collect_text(),
         status: doc
             .select_first(".widget_fic_similar > li:last-child > span:last-child")
             .map(|node| node.text_contents().as_str().into())

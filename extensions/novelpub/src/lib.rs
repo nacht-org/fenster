@@ -51,8 +51,8 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
 
     let novel = Novel {
         title: doc.select_first(".novel-title").get_text()?,
-        authors: doc.select_text(".author a"),
-        desc: doc.select_text(".summary .content p"),
+        authors: doc.select(".author a").collect_text(),
+        desc: doc.select(".summary .content p").collect_text(),
         thumb: doc.select_first(".cover img").get_attribute("data-src"),
         status,
         volumes: collect_toc(&url)?,

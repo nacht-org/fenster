@@ -44,19 +44,24 @@ impl OuterHtml for NodeRef {
     }
 }
 
-pub trait SelectText {
-    fn select_text(&self, selectors: &str) -> Vec<String>;
+pub trait CollectText {
+    fn collect_text(self) -> Vec<String>;
 }
 
-impl SelectText for NodeRef {
-    fn select_text(&self, selectors: &str) -> Vec<String> {
-        self.select(selectors)
-            .map(|nodes| {
-                nodes
-                    .map(|node| node.text_contents().clean_text())
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default()
+impl CollectText for Select<Elements<Descendants>> {
+    fn collect_text(self) -> Vec<String> {
+        self.map(|node| node.text_contents().clean_text())
+            .collect::<Vec<_>>()
+    }
+}
+
+impl<T> CollectText for Result<T, ()>
+where
+    T: CollectText,
+{
+    #[inline]
+    fn collect_text(self) -> Vec<String> {
+        self.map(T::collect_text).unwrap_or_default()
     }
 }
 
