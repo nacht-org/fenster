@@ -68,7 +68,7 @@ fn collect_metadata(doc: &NodeRef) -> Vec<Metadata> {
     let mut metadata = vec![];
 
     if let Some(node) = doc.select_first(".alternative-title").ok() {
-        let text = node.text_contents().trim().to_string();
+        let text = node.text_contents().clean_text();
         if !text.is_empty() {
             let map = HashMap::from([(String::from("role"), String::from("alt"))]);
             metadata.push(Metadata::new(String::from("title"), text, Some(map)))
@@ -177,7 +177,7 @@ fn extract_toc(doc: &NodeRef, volume: &mut Volume) -> Result<(), FensterError> {
 
         let chapter = Chapter {
             index,
-            title: format!("{} {}", chapter_no.trim(), chapter_title.trim()),
+            title: format!("{} {}", chapter_no.trim(), chapter_title.clean_text()),
             url: META.derive_abs_url(url, None)?,
             updated_at,
         };

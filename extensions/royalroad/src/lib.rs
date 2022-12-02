@@ -117,7 +117,7 @@ fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Result<Vec<Chapte
 
         let chapter = Chapter {
             index: chapters.len() as i32,
-            title: link.text_contents().trim().to_string(),
+            title: link.text_contents().clean_text(),
             url: META.derive_abs_url(url, None)?,
             updated_at,
         };

@@ -11,7 +11,7 @@ impl GetText for NodeDataRef<ElementData> {
 
     #[inline]
     fn get_text(&self) -> Self::Output {
-        self.text_contents().trim().to_string()
+        self.text_contents().clean_text()
     }
 }
 
@@ -50,7 +50,7 @@ impl SelectText for NodeRef {
         self.select(selectors)
             .map(|nodes| {
                 nodes
-                    .map(|node| node.text_contents().trim().to_string())
+                    .map(|node| node.text_contents().clean_text())
                     .collect::<Vec<_>>()
             })
             .unwrap_or_default()
@@ -104,5 +104,29 @@ impl<T, E> Transpose for Option<Result<T, E>> {
     #[inline]
     fn transpose(self) -> Self::Output {
         self.map_or(Ok(None), |r| r.map(Some))
+    }
+}
+
+pub trait CleanText {
+    fn clean_text(&self) -> String;
+}
+
+impl<T> CleanText for T
+where
+    T: AsRef<str>,
+{
+    #[inline]
+    fn clean_text(&self) -> String {
+        fn inner(value: &str) -> String {
+            value
+                .trim()
+                .chars()
+                .map(|c| match c {
+                    ' ' | '\t' => ' ',
+                    _ => c,
+                })
+                .collect()
+        }
+        inner(self.as_ref())
     }
 }
