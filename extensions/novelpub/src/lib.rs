@@ -202,23 +202,10 @@ pub fn fetch_chapter_content(url: String) -> Result<String, FensterError> {
         .select_first("#chapter-container")
         .map_err(|_| ParseError::ElementNotFound)?;
 
-    remove_select(&doc, ".adsbox, .adsbygoogle");
-    remove_select(&doc, "strong > strong");
-    remove_select(&doc, "strong i i");
-    remove_select(&doc, "p > sub");
+    doc.select(".adsbox, .adsbygoogle").detach_all();
+    doc.select("strong > strong").detach_all();
+    doc.select("strong i i").detach_all();
+    doc.select("p > sub").detach_all();
 
     content.as_node().outer_html().map_err(Into::into)
-}
-
-fn remove_select(doc: &NodeRef, selector: &str) {
-    let nodes = doc
-        .select(selector)
-        .map(|nodes| nodes.collect::<Vec<_>>())
-        .ok();
-
-    if let Some(nodes) = nodes {
-        for node in nodes {
-            node.as_node().detach();
-        }
-    }
 }

@@ -1,5 +1,8 @@
 use fenster_core::prelude::ParseError;
-use kuchiki::{ElementData, NodeDataRef, NodeRef};
+use kuchiki::{
+    iter::{Descendants, Elements, Select},
+    ElementData, NodeDataRef, NodeRef,
+};
 
 pub trait GetText {
     type Output;
@@ -90,6 +93,29 @@ where
             .map(|inner| inner.get_attribute(key))
             .ok()
             .flatten()
+    }
+}
+
+pub trait DetachAll {
+    fn detach_all(self);
+}
+
+impl DetachAll for Select<Elements<Descendants>> {
+    fn detach_all(self) {
+        for node in self.collect::<Vec<_>>() {
+            node.as_node().detach()
+        }
+    }
+}
+
+impl<T> DetachAll for Result<T, ()>
+where
+    T: DetachAll,
+{
+    fn detach_all(self) {
+        if let Some(nodes) = self.ok() {
+            nodes.detach_all();
+        }
     }
 }
 
