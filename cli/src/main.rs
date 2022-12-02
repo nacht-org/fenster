@@ -1,4 +1,5 @@
 mod build;
+mod epub;
 mod lock;
 
 use std::{fs::File, io::BufReader, path::PathBuf};
@@ -42,6 +43,10 @@ enum Commands {
 
     /// Build the extensions
     Build {
+        /// Build this extension only.
+        #[arg(short, long)]
+        extension: Option<PathBuf>,
+
         /// The output directory for the built extensions
         #[arg(short, long, default_value = "dist")]
         out: PathBuf,
@@ -59,6 +64,15 @@ enum Commands {
         /// The path to the lock file
         #[arg(short, long, default_value = "dist/lock.json")]
         lock: PathBuf,
+    },
+
+    Epub {
+        /// The url to the novel
+        url: Url,
+
+        /// The path to the source wasm
+        #[arg(short, long)]
+        wasm: PathBuf,
     },
 }
 
@@ -120,11 +134,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 None => println!("No source matching '{url}' found"),
             }
         }
-        Commands::Build { out } => {
-            build::build(out)?;
+        Commands::Build { extension, out } => {
+            build::build(extension, out)?;
         }
         Commands::Lock { dir } => {
             lock::lock(dir)?;
+        }
+        Commands::Epub { url, wasm } => {
+            epub::compile_epub(url, wasm)?;
         }
     }
 
