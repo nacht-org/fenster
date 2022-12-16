@@ -1,5 +1,5 @@
 mod build;
-mod epub;
+mod bundle;
 mod lock;
 
 use std::{fs::File, io::BufReader, path::PathBuf};
@@ -141,7 +141,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             lock::lock(dir)?;
         }
         Commands::Epub { url, wasm } => {
-            epub::compile_epub(url, wasm)?;
+            bundle::epub::compile_epub(url, wasm)?;
         }
     }
 
