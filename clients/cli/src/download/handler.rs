@@ -1,7 +1,3 @@
-mod data;
-mod log;
-mod options;
-
 use std::{
     fs::{self},
     mem,
@@ -12,34 +8,17 @@ use fenster_core::prelude::{Chapter, Meta};
 use fenster_engine::Runner;
 use url::Url;
 
-use self::{
-    data::Tracking,
-    log::{DownloadLog, EventKind},
-};
+use crate::data::{DownloadLog, NovelTracking, EventKind};
 
-pub use options::DownloadOptions;
-
-pub fn download(
-    url: Url,
-    wasm_path: PathBuf,
-    options: DownloadOptions,
-) -> anyhow::Result<Tracking> {
-    let mut handler = DownloadHandler::new(url, wasm_path, options)?;
-
-    handler.save()?;
-    handler.download()?;
-    handler.save()?;
-
-    Ok(handler.tracking)
-}
+use super::DownloadOptions;
 
 pub struct DownloadHandler {
-    runner: Runner,
-    meta: Meta,
-    save_dir: PathBuf,
-    log: DownloadLog,
-    tracking: Tracking,
-    options: DownloadOptions,
+    pub runner: Runner,
+    pub meta: Meta,
+    pub save_dir: PathBuf,
+    pub log: DownloadLog,
+    pub tracking: NovelTracking,
+    pub options: DownloadOptions,
 }
 
 impl DownloadHandler {
@@ -57,7 +36,7 @@ impl DownloadHandler {
         }
 
         let tracking_path = save_dir.join("tracking.json");
-        let tracking = Tracking::new(novel, tracking_path)?;
+        let tracking = NovelTracking::new(novel, tracking_path)?;
 
         let log_path = save_dir.join("log.jsonl");
         let log = DownloadLog::open(log_path)?;
@@ -126,7 +105,7 @@ impl DownloadHandler {
 
     fn download_chapters(
         runner: &mut Runner,
-        tracking: &Tracking,
+        tracking: &NovelTracking,
         log: &mut DownloadLog,
         chapter_dir: &Path,
         chapters: &[&Chapter],

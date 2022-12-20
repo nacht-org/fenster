@@ -1,16 +1,17 @@
 mod args;
 mod bundle;
+mod data;
+mod download;
 mod lock;
 
 use std::{fs::File, io::BufReader, path::PathBuf};
 
 use args::download_range::DownloadRange;
 use clap::{Parser, Subcommand};
+use download::DownloadOptions;
 use lock::Lock;
 use simplelog::{Config, LevelFilter, TermLogger};
 use url::Url;
-
-use crate::bundle::DownloadOptions;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -97,7 +98,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ..Default::default()
             };
 
-            bundle::download(url, wasm, options)?;
+            download::download(url, wasm, options)?;
         }
     }
 
