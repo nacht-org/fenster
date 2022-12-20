@@ -1,14 +1,18 @@
+mod args;
 mod build;
 mod bundle;
 mod lock;
 
-use std::{fs::File, io::BufReader, path::PathBuf};
+use std::{fs::File, io::BufReader, ops::RangeInclusive, path::PathBuf, str::FromStr};
 
+use args::download_range::DownloadRange;
 use clap::{Parser, Subcommand};
 use fenster_engine::Runner;
 use lock::Lock;
 use simplelog::{Config, LevelFilter, TermLogger};
 use url::Url;
+
+use crate::bundle::DownloadOptions;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -66,13 +70,17 @@ enum Commands {
         lock: PathBuf,
     },
 
-    Epub {
+    Download {
         /// The url to the novel
         url: Url,
 
         /// The path to the source wasm
         #[arg(short, long)]
         wasm: PathBuf,
+
+        /// The range of chapters to download
+        #[arg(short, long)]
+        range: Option<DownloadRange>,
     },
 }
 
@@ -140,8 +148,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Lock { dir } => {
             lock::lock(dir)?;
         }
-        Commands::Epub { url, wasm } => {
-            bundle::epub::compile_epub(url, wasm)?;
+        Commands::Download { url, wasm, range } => {
+            let options = DownloadOptions {
+                range: range.map(|r| r.0),
+                ..Default::default()
+            };
+
+            bundle::download(url, wasm, options)?;
         }
     }
 

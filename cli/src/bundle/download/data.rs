@@ -1,11 +1,10 @@
 use std::{
-    collections::{HashMap, HashSet},
-    fs::{File, OpenOptions},
-    io::{BufRead, BufReader, BufWriter, LineWriter, Write},
-    path::{Path, PathBuf},
+    collections::HashMap,
+    fs::File,
+    io::{BufReader, BufWriter},
+    path::PathBuf,
 };
 
-use anyhow::Context;
 use chrono::{DateTime, Utc};
 use fenster_core::prelude::*;
 use serde::{Deserialize, Serialize};

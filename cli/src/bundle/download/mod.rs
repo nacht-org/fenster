@@ -1,13 +1,14 @@
 mod data;
 mod log;
+mod options;
 
 use std::{
     fs::{self},
     mem,
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
-use fenster_core::prelude::Meta;
+use fenster_core::prelude::{Chapter, Meta};
 use fenster_engine::Runner;
 use url::Url;
 
@@ -16,16 +17,33 @@ use self::{
     log::{DownloadLog, EventKind},
 };
 
+pub use options::DownloadOptions;
+
+pub fn download(
+    url: Url,
+    wasm_path: PathBuf,
+    options: DownloadOptions,
+) -> anyhow::Result<Tracking> {
+    let mut handler = DownloadHandler::new(url, wasm_path, options)?;
+
+    handler.save()?;
+    handler.download()?;
+    handler.save()?;
+
+    Ok(handler.tracking)
+}
+
 pub struct DownloadHandler {
     runner: Runner,
     meta: Meta,
     save_dir: PathBuf,
     log: DownloadLog,
     tracking: Tracking,
+    options: DownloadOptions,
 }
 
 impl DownloadHandler {
-    pub fn new(url: Url, wasm_path: PathBuf) -> anyhow::Result<Self> {
+    pub fn new(url: Url, wasm_path: PathBuf, options: DownloadOptions) -> anyhow::Result<Self> {
         let mut runner = Runner::new(&wasm_path)?;
 
         let novel = runner.fetch_novel(url.as_str())?;
@@ -50,6 +68,7 @@ impl DownloadHandler {
             save_dir,
             tracking,
             log,
+            options,
         })
     }
 
@@ -75,22 +94,59 @@ impl DownloadHandler {
             fs::create_dir_all(&chapter_dir)?;
         }
 
-        for volume in &self.tracking.data.novel.volumes {
-            for chapter in &volume.chapters {
-                if self.tracking.is_downloaded(&chapter.url) {
-                    continue;
-                }
+        let chapters = self
+            .tracking
+            .data
+            .novel
+            .volumes
+            .iter()
+            .flat_map(|v| &v.chapters)
+            .collect::<Vec<_>>();
 
-                let content = self.runner.fetch_chapter_content(&chapter.url)?;
-                let Some(content) = content else { continue };
+        if let Some(range) = self.options.range.as_ref() {
+            Self::download_chapters(
+                &mut self.runner,
+                &self.tracking,
+                &mut self.log,
+                &chapter_dir,
+                &chapters[range.clone()],
+            )?;
+        } else {
+            Self::download_chapters(
+                &mut self.runner,
+                &self.tracking,
+                &mut self.log,
+                &chapter_dir,
+                &chapters,
+            )?;
+        }
 
-                let path = chapter_dir.join(format!("{}.html", chapter.index));
-                fs::write(&path, content)?;
-                self.log.push_event(EventKind::Downloaded {
-                    url: chapter.url.clone(),
-                    path,
-                })?;
+        Ok(())
+    }
+
+    fn download_chapters(
+        runner: &mut Runner,
+        tracking: &Tracking,
+        log: &mut DownloadLog,
+        chapter_dir: &Path,
+        chapters: &[&Chapter],
+    ) -> anyhow::Result<()> {
+        for chapter in chapters {
+            if tracking.is_downloaded(&chapter.url) {
+                continue;
             }
+
+            let content = runner.fetch_chapter_content(&chapter.url)?;
+            let Some(content) = content else { continue };
+
+            let filename = format!("{}.html", chapter.index);
+            let path = chapter_dir.join(&filename);
+            fs::write(&path, content)?;
+
+            log.push_event(EventKind::Downloaded {
+                url: chapter.url.clone(),
+                path: Path::new("chapters").join(&filename),
+            })?;
         }
 
         Ok(())
