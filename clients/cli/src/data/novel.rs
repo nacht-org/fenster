@@ -10,6 +10,7 @@ use chrono::{DateTime, Utc};
 use fenster_core::prelude::*;
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug)]
 pub struct NovelTracking {
     pub data: TrackingData,
     pub path: PathBuf,
@@ -36,6 +37,12 @@ impl NovelTracking {
             }
         };
 
+        Ok(Self { data, path })
+    }
+
+    pub fn open(path: PathBuf) -> anyhow::Result<Self> {
+        let file = BufReader::new(File::open(&path)?);
+        let data = serde_json::from_reader(file)?;
         Ok(Self { data, path })
     }
 

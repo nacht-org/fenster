@@ -6,9 +6,10 @@ mod lock;
 
 use std::{fs::File, io::BufReader, path::PathBuf, process::exit};
 
+use anyhow::Context;
 use args::download_range::DownloadRange;
 use clap::{Parser, Subcommand};
-use data::GlobalTracker;
+use data::{GlobalTracker, NovelTracking};
 use download::DownloadOptions;
 use lock::Lock;
 use simplelog::{Config, LevelFilter, TermLogger};
@@ -117,8 +118,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Bundle { url } => {
             let global = GlobalTracker::open(cli.global_file)?;
-            let path = global.data.get_path_for_url(&url.to_string());
-            println!("{path:?}");
+            let path = global
+                .data
+                .get_path_for_url(&url.to_string())
+                .with_context(|| "The novel does not exist")?;
+
+            let tracking = NovelTracking::open(path.join("tracking.json"))?;
+            println!("{tracking:#?}");
         }
     }
 
