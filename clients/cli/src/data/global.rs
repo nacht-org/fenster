@@ -1,11 +1,12 @@
 use std::{
     collections::HashMap,
-    fs::File,
+    fs::{self, File},
     io::{BufReader, BufWriter},
-    path::PathBuf,
+    path::{self, Path, PathBuf},
 };
 
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 #[derive(Debug)]
 pub struct GlobalTracker {
@@ -15,11 +16,11 @@ pub struct GlobalTracker {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct GlobalData {
-    novels: HashMap<String, String>,
+    novels: HashMap<String, PathBuf>,
 }
 
 impl GlobalTracker {
-    pub fn new(path: PathBuf) -> anyhow::Result<Self> {
+    pub fn open(path: PathBuf) -> anyhow::Result<Self> {
         let data = if path.exists() {
             let file = BufReader::new(File::open(&path)?);
             serde_json::from_reader(file)?
@@ -31,8 +32,24 @@ impl GlobalTracker {
     }
 
     pub fn save(&self) -> anyhow::Result<()> {
+        if let Some(parent) = self.path.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent)?;
+            }
+        }
+
         let mut file = BufWriter::new(File::create(&self.path)?);
         serde_json::to_writer(&mut file, &self.data)?;
         Ok(())
+    }
+}
+
+impl GlobalData {
+    pub fn insert_novel(&mut self, key: String, value: PathBuf) {
+        self.novels.insert(key, value);
+    }
+
+    pub fn get_path_for_url(&self, url: &str) -> Option<&Path> {
+        self.novels.get(url).map(|v| v.as_path())
     }
 }

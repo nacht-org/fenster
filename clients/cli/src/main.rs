@@ -4,10 +4,11 @@ mod data;
 mod download;
 mod lock;
 
-use std::{fs::File, io::BufReader, path::PathBuf};
+use std::{fs::File, io::BufReader, path::PathBuf, process::exit};
 
 use args::download_range::DownloadRange;
 use clap::{Parser, Subcommand};
+use data::GlobalTracker;
 use download::DownloadOptions;
 use lock::Lock;
 use simplelog::{Config, LevelFilter, TermLogger};
@@ -19,6 +20,12 @@ struct Cli {
     /// Provide additional information (default only shows errors).
     #[clap(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
+
+    #[clap(short, long, default_value = "dist/extension-lock.json")]
+    lock_file: PathBuf,
+
+    #[clap(short, long, default_value = "dist/data/global.json")]
+    global_file: PathBuf,
 
     #[command(subcommand)]
     command: Commands,
@@ -34,23 +41,19 @@ enum Commands {
 
     Detect {
         url: Url,
-
-        /// The path to the lock file
-        #[arg(short, long, default_value = "dist/lock.json")]
-        lock: PathBuf,
     },
 
     Download {
         /// The url to the novel
         url: Url,
 
-        /// The path to the source wasm
-        #[arg(short, long)]
-        wasm: PathBuf,
-
         /// The range of chapters to download
         #[arg(short, long)]
         range: Option<DownloadRange>,
+    },
+
+    Bundle {
+        url: Url,
     },
 }
 
@@ -74,8 +77,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .unwrap();
 
     match cli.command {
-        Commands::Detect { url, lock } => {
-            let file = File::open(lock)?;
+        Commands::Detect { url } => {
+            let file = File::open(cli.lock_file)?;
             let lock: Lock = serde_json::from_reader(BufReader::new(file))?;
 
             let extension = lock
@@ -90,15 +93,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Commands::Lock { dir } => {
-            lock::lock(dir)?;
+            let lock = Lock::generate(&dir)?;
+            lock.save(&cli.lock_file)?;
         }
-        Commands::Download { url, wasm, range } => {
+        Commands::Download { url, range } => {
+            let lock = Lock::open(&cli.lock_file)?;
+            let Some(extension) = lock.detect(url.to_string())? else {
+                println!("supported source not found.");
+                exit(1);
+            };
+
             let options = DownloadOptions {
                 range: range.map(|r| r.0),
                 ..Default::default()
             };
 
-            download::download(url, wasm, options)?;
+            download::download(
+                url,
+                PathBuf::from(&extension.path),
+                cli.global_file,
+                options,
+            )?;
+        }
+        Commands::Bundle { url } => {
+            let global = GlobalTracker::open(cli.global_file)?;
+            let path = global.data.get_path_for_url(&url.to_string());
+            println!("{path:?}");
         }
     }
 

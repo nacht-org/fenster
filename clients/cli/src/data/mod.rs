@@ -1,5 +1,5 @@
-mod global_tracking;
-mod novel_tracking;
+mod global;
+mod novel;
 
-pub use global_tracking::{GlobalData, GlobalTracker};
-pub use novel_tracking::{DownloadLog, EventKind, NovelTracking};
+pub use global::{GlobalData, GlobalTracker};
+pub use novel::{DownloadLog, EventKind, NovelTracking};

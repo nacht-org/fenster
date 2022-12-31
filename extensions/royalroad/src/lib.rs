@@ -106,7 +106,8 @@ fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Result<Vec<Chapte
             .ok()
             .flatten()
             .flatten()
-            .map(|timestamp| NaiveDateTime::from_timestamp(timestamp, 0))
+            .map(|timestamp| NaiveDateTime::from_timestamp_opt(timestamp, 0))
+            .flatten()
             .map(|naive| DateTime::from_utc(naive, Utc))
             .map(|dt| dt.into());
 

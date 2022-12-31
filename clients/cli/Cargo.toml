@@ -1,5 +1,5 @@
 [package]
-name = "clients_cli"
+name = "fenster_cli_client"
 version = "0.1.0"
 edition = "2021"
 

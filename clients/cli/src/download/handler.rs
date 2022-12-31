@@ -8,7 +8,7 @@ use fenster_core::prelude::{Chapter, Meta};
 use fenster_engine::Runner;
 use url::Url;
 
-use crate::data::{DownloadLog, NovelTracking, EventKind};
+use crate::data::{DownloadLog, EventKind, NovelTracking};
 
 use super::DownloadOptions;
 
@@ -82,23 +82,19 @@ impl DownloadHandler {
             .flat_map(|v| &v.chapters)
             .collect::<Vec<_>>();
 
-        if let Some(range) = self.options.range.as_ref() {
-            Self::download_chapters(
-                &mut self.runner,
-                &self.tracking,
-                &mut self.log,
-                &chapter_dir,
-                &chapters[range.clone()],
-            )?;
+        let chapters = if let Some(range) = self.options.range.as_ref() {
+            &chapters[range.clone()]
         } else {
-            Self::download_chapters(
-                &mut self.runner,
-                &self.tracking,
-                &mut self.log,
-                &chapter_dir,
-                &chapters,
-            )?;
-        }
+            &chapters
+        };
+
+        Self::download_chapters(
+            &mut self.runner,
+            &self.tracking,
+            &mut self.log,
+            &chapter_dir,
+            &chapters,
+        )?;
 
         Ok(())
     }
