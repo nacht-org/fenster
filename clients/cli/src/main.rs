@@ -25,8 +25,8 @@ struct Cli {
     #[clap(short, long, default_value = "dist/extension-lock.json")]
     lock_file: PathBuf,
 
-    #[clap(short, long, default_value = "dist/data/global.json")]
-    global_file: PathBuf,
+    #[clap(short, long, default_value = "dist/data")]
+    data_dir: PathBuf,
 
     #[command(subcommand)]
     command: Commands,
@@ -58,7 +58,7 @@ enum Commands {
     },
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     let level = match cli.verbose {
@@ -77,6 +77,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .unwrap();
 
+    run(cli)
+}
+
+fn run(cli: Cli) -> anyhow::Result<()> {
     match cli.command {
         Commands::Detect { url } => {
             let file = File::open(cli.lock_file)?;
@@ -105,25 +109,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
 
             let options = DownloadOptions {
+                dir: cli.data_dir,
                 range: range.map(|r| r.0),
-                ..Default::default()
             };
 
-            download::download(
-                url,
-                PathBuf::from(&extension.path),
-                cli.global_file,
-                options,
-            )?;
+            download::download(url, PathBuf::from(&extension.path), options)?;
         }
         Commands::Bundle { url } => {
-            let global = GlobalTracker::open(cli.global_file)?;
+            let global = GlobalTracker::in_dir(&cli.data_dir)?;
             let path = global
                 .data
                 .get_path_for_url(&url.to_string())
                 .with_context(|| "The novel does not exist")?;
 
-            let tracking = NovelTracking::open(path.join("tracking.json"))?;
+            let tracking = NovelTracking::open(path.join(download::DATA_FILENAME))?;
             println!("{tracking:#?}");
         }
     }

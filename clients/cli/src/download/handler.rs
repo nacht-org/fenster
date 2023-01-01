@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use fenster_core::prelude::{Chapter, Meta};
+use fenster_core::prelude::{Chapter, Meta, Novel};
 use fenster_engine::Runner;
 use url::Url;
 
@@ -21,6 +21,20 @@ pub struct DownloadHandler {
     pub options: DownloadOptions,
 }
 
+pub const DATA_FILENAME: &'static str = "data.json";
+pub const LOG_FILENAME: &'static str = "log.jsonl";
+
+fn get_novel_dir(root: &Path, meta: &Meta, novel: &Novel) -> PathBuf {
+    let mut save_dir = root.to_path_buf();
+    save_dir.push(&meta.id);
+    save_dir.push(slug::slugify(&novel.title));
+    save_dir
+}
+
+fn get_chapters_dir(root: &Path) -> PathBuf {
+    root.join("chapters")
+}
+
 impl DownloadHandler {
     pub fn new(url: Url, wasm_path: PathBuf, options: DownloadOptions) -> anyhow::Result<Self> {
         let mut runner = Runner::new(&wasm_path)?;
@@ -28,17 +42,15 @@ impl DownloadHandler {
         let novel = runner.fetch_novel(url.as_str())?;
         let meta = runner.meta()?;
 
-        let mut save_dir = PathBuf::from("data");
-        save_dir.push(&meta.id);
-        save_dir.push(slug::slugify(&novel.title));
+        let save_dir = get_novel_dir(&options.dir, &meta, &novel);
         if !save_dir.exists() {
             fs::create_dir_all(&save_dir)?;
         }
 
-        let tracking_path = save_dir.join("tracking.json");
+        let tracking_path = save_dir.join(DATA_FILENAME);
         let tracking = NovelTracking::new(novel, tracking_path)?;
 
-        let log_path = save_dir.join("log.jsonl");
+        let log_path = save_dir.join(LOG_FILENAME);
         let log = DownloadLog::open(log_path)?;
 
         Ok(Self {
@@ -68,7 +80,7 @@ impl DownloadHandler {
     }
 
     pub fn download(&mut self) -> anyhow::Result<()> {
-        let chapter_dir = self.save_dir.join("chapters");
+        let chapter_dir = get_chapters_dir(&self.save_dir);
         if !chapter_dir.exists() {
             fs::create_dir_all(&chapter_dir)?;
         }
@@ -82,10 +94,9 @@ impl DownloadHandler {
             .flat_map(|v| &v.chapters)
             .collect::<Vec<_>>();
 
-        let chapters = if let Some(range) = self.options.range.as_ref() {
-            &chapters[range.clone()]
-        } else {
-            &chapters
+        let chapters = match self.options.range.as_ref() {
+            Some(range) => &chapters[range.clone()],
+            None => &chapters,
         };
 
         Self::download_chapters(

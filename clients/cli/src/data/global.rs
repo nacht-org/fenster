@@ -2,11 +2,11 @@ use std::{
     collections::HashMap,
     fs::{self, File},
     io::{BufReader, BufWriter},
-    path::{self, Path, PathBuf},
+    path::{Path, PathBuf},
 };
 
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 #[derive(Debug)]
 pub struct GlobalTracker {
@@ -20,10 +20,16 @@ pub struct GlobalData {
 }
 
 impl GlobalTracker {
+    pub fn in_dir(dir: &Path) -> anyhow::Result<Self> {
+        let path = dir.join("global.json");
+        Self::open(path)
+    }
+
     pub fn open(path: PathBuf) -> anyhow::Result<Self> {
         let data = if path.exists() {
-            let file = BufReader::new(File::open(&path)?);
-            serde_json::from_reader(file)?
+            let file = File::open(&path).with_context(|| "Failed to open global file")?;
+            let reader = BufReader::new(file);
+            serde_json::from_reader(reader)?
         } else {
             Default::default()
         };
