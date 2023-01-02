@@ -19,6 +19,7 @@ pub struct NovelTracking {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TrackingData {
     pub novel: Novel,
+    pub cover_path: Option<PathBuf>,
     pub downloaded: HashMap<String, PathBuf>,
     pub updated_at: DateTime<Utc>,
 }
@@ -32,6 +33,7 @@ impl NovelTracking {
         } else {
             TrackingData {
                 novel,
+                cover_path: None,
                 downloaded: HashMap::new(),
                 updated_at: Utc::now(),
             }

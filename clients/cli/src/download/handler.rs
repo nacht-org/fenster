@@ -1,11 +1,13 @@
 use std::{
-    fs::{self},
+    fs::{self, File},
+    io::BufWriter,
     mem,
     path::{Path, PathBuf},
 };
 
 use fenster_core::prelude::{Chapter, Meta, Novel};
 use fenster_engine::Runner;
+use log::info;
 use url::Url;
 
 use crate::data::{DownloadLog, EventKind, NovelTracking};
@@ -133,6 +135,12 @@ impl DownloadHandler {
             let path = chapter_dir.join(&filename);
             fs::write(&path, content)?;
 
+            info!(
+                "Chapter '{}' saved to '{}'.",
+                &chapter.title,
+                path.display()
+            );
+
             log.push_event(EventKind::Downloaded {
                 url: chapter.url.clone(),
                 path: Path::new("chapters").join(&filename),
@@ -140,5 +148,71 @@ impl DownloadHandler {
         }
 
         Ok(())
+    }
+
+    pub fn is_cover_downloaded(&self) -> bool {
+        let cover_path = &self.tracking.data.cover_path;
+        let Some(cover_path) = cover_path else { return false };
+        return cover_path.exists() && cover_path.is_file();
+    }
+
+    pub fn download_cover(&mut self) -> anyhow::Result<()> {
+        let data = &mut self.tracking.data;
+        println!("{:?}", data.novel.thumb);
+        let Some(url) = data.novel.thumb.as_ref() else { return Ok(()) };
+
+        let suffix = get_file_suffix_from_url(url)?;
+        println!("{suffix}");
+
+        let mut resp = reqwest::blocking::get(url)?;
+        let cover_path = data
+            .cover_path
+            .clone()
+            .unwrap_or_else(|| self.save_dir.join(format!("cover{suffix}")));
+
+        let mut file = BufWriter::new(File::create(&cover_path)?);
+        resp.copy_to(&mut file)?;
+
+        info!("Downloaded novel cover to '{}'.", cover_path.display());
+        data.cover_path = Some(cover_path);
+        Ok(())
+    }
+}
+
+/// Extract the suffix from a url that point to a file
+fn get_file_suffix_from_url(url: &str) -> Result<String, url::ParseError> {
+    let parsed_url = Url::parse(url)?;
+    let suffix = Path::new(parsed_url.path())
+        .extension()
+        .unwrap_or_default()
+        .to_string_lossy();
+
+    let suffix = if suffix.is_empty() {
+        String::new()
+    } else {
+        format!(".{suffix}")
+    };
+
+    Ok(suffix)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::get_file_suffix_from_url;
+
+    #[test]
+    fn test_get_file_suffix_from_url() {
+        assert_eq!(
+            get_file_suffix_from_url("https://website.com/image.jpg"),
+            Ok(String::from(".jpg"))
+        );
+        assert_eq!(
+            get_file_suffix_from_url("https://website.com/image.jpg?w=400&h=300"),
+            Ok(String::from(".jpg"))
+        );
+        assert_eq!(
+            get_file_suffix_from_url("https://website.com/non/image"),
+            Ok(String::from(""))
+        );
     }
 }

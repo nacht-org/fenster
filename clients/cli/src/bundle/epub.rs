@@ -27,6 +27,29 @@ pub fn compile_epub(
         .title("Preface")
         .reftype(ReferenceType::Text);
 
+    if let Some(path) = data.cover_path {
+        let guess = mime_guess::from_path(&path);
+        if let Some(mime) = guess.first() {
+            if path.exists() {
+                let file = File::open(&path)?;
+                let name = path
+                    .file_name()
+                    .map(|name| name.to_string_lossy().to_string())
+                    .unwrap_or_else(|| {
+                        format!(
+                            "cover.{}",
+                            mime.suffix().map(|s| s.as_str()).unwrap_or_default()
+                        )
+                    });
+
+                builder.add_cover_image(name, file, mime.essence_str())?;
+                info!("Written cover file '{}'", path.display());
+            } else {
+                warn!("The cover file could not be found.");
+            }
+        }
+    }
+
     builder.metadata("title", &novel.title)?;
     for author in novel.authors {
         builder.metadata("author", author)?;
@@ -50,11 +73,7 @@ pub fn compile_epub(
 
     for volume in novel.volumes {
         for chapter in volume.chapters {
-            let file_name = format!(
-                "chapters/{}-{}.xhtml",
-                &chapter.index,
-                slug::slugify(&chapter.title)
-            );
+            let file_name = format!("chapters/{}.xhtml", &chapter.index,);
 
             let content = if let Some(file_path) = data.downloaded.get(&chapter.url) {
                 let file_path = base_path.join(file_path);

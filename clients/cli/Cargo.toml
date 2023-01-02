@@ -15,6 +15,8 @@ fenster_engine = { version = "0.1.0", path = "../../engine" }
 indoc = "1.0.8"
 itertools = "0.10.5"
 log = "0.4.17"
+mime_guess = "2.0.4"
+reqwest = { version = "0.11.13", features = ["blocking"] }
 serde = { version = "1.0.147", features = ["derive"] }
 serde_json = "1.0.88"
 simplelog = "0.12.0"

@@ -22,6 +22,11 @@ pub fn download(
     let mut handler = DownloadHandler::new(url, wasm_path, options)?;
     handler.save()?;
 
+    if !handler.is_cover_downloaded() {
+        handler.download_cover()?;
+        handler.save()?;
+    }
+
     global
         .data
         .insert_novel(url_string, handler.save_dir.clone());
