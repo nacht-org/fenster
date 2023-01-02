@@ -105,6 +105,7 @@ impl DownloadHandler {
             &mut self.log,
             &chapter_dir,
             &chapters,
+            &self.save_dir,
         )?;
 
         Ok(())
@@ -116,10 +117,13 @@ impl DownloadHandler {
         log: &mut DownloadLog,
         chapter_dir: &Path,
         chapters: &[&Chapter],
+        save_dir: &Path,
     ) -> anyhow::Result<()> {
         for chapter in chapters {
-            if tracking.is_downloaded(&chapter.url) {
-                continue;
+            if let Some(path) = tracking.data.downloaded.get(&chapter.url) {
+                if save_dir.join(path).exists() {
+                    continue;
+                }
             }
 
             let content = runner.fetch_chapter_content(&chapter.url)?;
