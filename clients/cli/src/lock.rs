@@ -33,7 +33,7 @@ impl Lock {
         serde_json::from_reader(reader).with_context(|| "failed to parse lock file")
     }
 
-    pub fn detect(&self, url: String) -> anyhow::Result<Option<&Extension>> {
+    pub fn detect(&self, url: &str) -> anyhow::Result<Option<&Extension>> {
         for (_, extension) in &self.extensions {
             for base_url in &extension.base_urls {
                 if url.starts_with(base_url) {

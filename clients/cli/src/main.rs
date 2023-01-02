@@ -4,13 +4,19 @@ mod data;
 mod download;
 mod lock;
 
-use std::{fs::File, io::BufReader, path::PathBuf, process::exit};
+use std::{
+    fs::File,
+    io::{BufReader, BufWriter},
+    path::{Path, PathBuf},
+    process::exit,
+};
 
-use anyhow::Context;
+use anyhow::{anyhow, bail, Context};
 use args::download_range::DownloadRange;
 use clap::{Parser, Subcommand};
 use data::{GlobalTracker, NovelTracking};
 use download::DownloadOptions;
+use fenster_engine::Runner;
 use lock::Lock;
 use simplelog::{Config, LevelFilter, TermLogger};
 use url::Url;
@@ -103,7 +109,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         }
         Commands::Download { url, range } => {
             let lock = Lock::open(&cli.lock_file)?;
-            let Some(extension) = lock.detect(url.to_string())? else {
+            let Some(extension) = lock.detect(url.as_str())? else {
                 println!("supported source not found.");
                 exit(1);
             };
@@ -122,8 +128,31 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 .get_path_for_url(&url.to_string())
                 .with_context(|| "The novel does not exist")?;
 
-            let tracking = NovelTracking::open(path.join(download::DATA_FILENAME))?;
-            println!("{tracking:#?}");
+            let lock = Lock::open(&cli.lock_file)?;
+            let meta = lock.detect(url.as_str())?.map(|ext| {
+                let path = Path::new(&ext.path);
+                if !path.exists() {
+                    bail!("The wasm extension file could not be found");
+                }
+
+                let mut runner = Runner::new(path)?;
+                let meta = runner.meta()?;
+
+                Ok(meta)
+            });
+
+            let meta = match meta {
+                Some(Ok(meta)) => Some(meta),
+                _ => {
+                    log::warn!("failed to retrieve meta information for the url");
+                    None
+                }
+            };
+
+            let data = NovelTracking::open(path.join(download::DATA_FILENAME))?.data;
+            let mut file = BufWriter::new(File::create("out.epub")?);
+            bundle::compile_epub(meta, data, path, &mut file)
+                .map_err(|_| anyhow!("failed to bundle to epub"))?;
         }
     }
 

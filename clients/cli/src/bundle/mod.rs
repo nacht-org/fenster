@@ -1,1 +1,3 @@
-pub mod epub;
+mod epub;
+
+pub use epub::compile_epub;

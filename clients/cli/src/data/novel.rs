@@ -66,10 +66,6 @@ impl NovelTracking {
         serde_json::to_writer(&mut file, &self.data)?;
         Ok(())
     }
-
-    pub fn is_downloaded(&self, url: &str) -> bool {
-        self.data.downloaded.contains_key(url)
-    }
 }
 
 #[derive(Debug)]
