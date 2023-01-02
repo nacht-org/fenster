@@ -28,10 +28,10 @@ struct Cli {
     #[clap(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
 
-    #[clap(short, long, default_value = "dist/extension-lock.json")]
+    #[clap(short, long, default_value = "extension-lock.json")]
     lock_file: PathBuf,
 
-    #[clap(short, long, default_value = "dist/data")]
+    #[clap(short, long, default_value = "data")]
     data_dir: PathBuf,
 
     #[command(subcommand)]
@@ -42,7 +42,7 @@ struct Cli {
 enum Commands {
     Lock {
         /// The directory to find wasm extensions
-        #[arg(short, long, default_value = "dist")]
+        #[arg(short, long, default_value = "extensions")]
         dir: PathBuf,
     },
 

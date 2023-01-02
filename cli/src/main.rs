@@ -47,7 +47,7 @@ enum Commands {
         extension: Option<PathBuf>,
 
         /// The output directory for the built extensions
-        #[arg(short, long, default_value = "dist")]
+        #[arg(short, long, default_value = "extensions")]
         out: PathBuf,
     },
 
