@@ -5,7 +5,7 @@ mod download;
 mod lock;
 
 use std::{
-    fs::File,
+    fs::{self, File},
     io::{BufReader, BufWriter},
     path::{Path, PathBuf},
     process::exit,
@@ -18,6 +18,7 @@ use data::{GlobalTracker, NovelTracking};
 use download::DownloadOptions;
 use fenster_engine::Runner;
 use lock::Lock;
+use log::{info, warn};
 use simplelog::{Config, LevelFilter, TermLogger};
 use url::Url;
 
@@ -123,10 +124,14 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         }
         Commands::Bundle { url } => {
             let global = GlobalTracker::in_dir(&cli.data_dir)?;
+            info!("Loaded global data");
+
             let path = global
                 .data
                 .get_path_for_url(&url.to_string())
                 .with_context(|| "The novel does not exist")?;
+
+            info!("Found novel data at '{}'.", path.display());
 
             let lock = Lock::open(&cli.lock_file)?;
             let meta = lock.detect(url.as_str())?.map(|ext| {
@@ -138,19 +143,35 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 let mut runner = Runner::new(path)?;
                 let meta = runner.meta()?;
 
+                info!("Acquired source meta information from wasm file.");
+
                 Ok(meta)
             });
 
             let meta = match meta {
                 Some(Ok(meta)) => Some(meta),
                 _ => {
-                    log::warn!("failed to retrieve meta information for the url");
+                    warn!("failed to retrieve meta information for the url");
                     None
                 }
             };
 
             let data = NovelTracking::open(path.join(download::DATA_FILENAME))?.data;
-            let mut file = BufWriter::new(File::create("out.epub")?);
+
+            info!("Loaded novel information from disk");
+
+            let output_path =
+                path.join(format!("output/{}.epub", slug::slugify(&data.novel.title)));
+            if let Some(parent) = output_path.parent() {
+                if !parent.exists() {
+                    fs::create_dir_all(parent)?;
+                }
+            }
+
+            let mut file = BufWriter::new(File::create(&output_path)?);
+
+            info!("Writing to '{}'", &output_path.display());
+
             bundle::compile_epub(meta, data, path, &mut file)
                 .map_err(|_| anyhow!("failed to bundle to epub"))?;
         }
