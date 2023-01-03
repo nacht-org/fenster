@@ -50,6 +50,9 @@ pub fn compile_epub(
         builder.metadata(metadata.name, metadata.value)?;
     }
 
+    builder.metadata("generator", "fenster")?;
+    builder.metadata("lang", novel.lang)?;
+
     info!("Written metadata");
 
     builder.add_content(preface)?;
