@@ -25,29 +25,10 @@ pub fn compile_epub(
     let preface_content = preface_content(&meta, &novel);
     let preface = EpubContent::new("preface.xhtml", preface_content.as_bytes())
         .title("Preface")
-        .reftype(ReferenceType::Text);
+        .reftype(ReferenceType::Preface);
 
-    if let Some(path) = data.cover_path {
-        let guess = mime_guess::from_path(&path);
-        if let Some(mime) = guess.first() {
-            if path.exists() {
-                let file = File::open(&path)?;
-                let name = path
-                    .file_name()
-                    .map(|name| name.to_string_lossy().to_string())
-                    .unwrap_or_else(|| {
-                        format!(
-                            "cover.{}",
-                            mime.suffix().map(|s| s.as_str()).unwrap_or_default()
-                        )
-                    });
-
-                builder.add_cover_image(name, file, mime.essence_str())?;
-                info!("Written cover file '{}'", path.display());
-            } else {
-                warn!("The cover file could not be found.");
-            }
-        }
+    if let Some(path) = &data.cover_path {
+        add_cover_image(&mut builder, path)?;
     }
 
     builder.metadata("title", &novel.title)?;
@@ -62,6 +43,10 @@ pub fn compile_epub(
     info!("Written title, authors, and description");
 
     for metadata in novel.metadata {
+        if metadata.name != "subject" {
+            continue;
+        }
+
         builder.metadata(metadata.name, metadata.value)?;
     }
 
@@ -80,11 +65,9 @@ pub fn compile_epub(
                 let content = fs::read_to_string(&file_path)?;
 
                 info!("Read chapter content from '{}'.", file_path.display());
-
                 prepare_content(&chapter, content)
             } else {
                 warn!("Using placeholder content for '{}'.", file_name);
-
                 empty_content(&chapter)
             };
 
@@ -114,6 +97,32 @@ pub fn empty_content(chapter: &Chapter) -> String {
         <h1>{title}</h1>
         <p>No downloaded content</p>
     "#}
+}
+
+fn add_cover_image(
+    builder: &mut EpubBuilder<ZipLibrary>,
+    cover_path: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let guess = mime_guess::from_path(&cover_path);
+    if let Some(mime) = guess.first() {
+        if cover_path.exists() {
+            let file = File::open(&cover_path)?;
+            let name = cover_path
+                .file_name()
+                .map(|name| name.to_string_lossy().to_string())
+                .unwrap_or_else(|| {
+                    let suffix = mime.suffix().map(|s| s.as_str()).unwrap_or_default();
+                    format!("cover.{suffix}")
+                });
+
+            builder.add_cover_image(name, file, mime.essence_str())?;
+            info!("Written cover file '{}'", cover_path.display());
+        } else {
+            warn!("The cover file could not be found.");
+        }
+    }
+
+    Ok(())
 }
 
 fn capitalize(s: &str) -> String {
