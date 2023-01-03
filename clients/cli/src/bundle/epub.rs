@@ -36,8 +36,8 @@ pub fn compile_epub(
         builder.metadata("author", author)?;
     }
 
-    if !novel.desc.is_empty() {
-        builder.metadata("description", novel.desc.join("\n"))?;
+    for paragraph in novel.desc {
+        builder.metadata("description", paragraph)?;
     }
 
     info!("Written title, authors, and description");
