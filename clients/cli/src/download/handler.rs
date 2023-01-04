@@ -3,6 +3,7 @@ use std::{
     io::BufWriter,
     mem,
     path::{Path, PathBuf},
+    thread,
 };
 
 use anyhow::bail;
@@ -110,6 +111,7 @@ impl DownloadHandler {
             &chapter_dir,
             &chapters,
             &self.save_dir,
+            &self.options,
         )?;
 
         Ok(())
@@ -122,12 +124,17 @@ impl DownloadHandler {
         chapter_dir: &Path,
         chapters: &[&Chapter],
         save_dir: &Path,
+        options: &DownloadOptions,
     ) -> anyhow::Result<()> {
         for chapter in chapters {
             if let Some(path) = tracking.data.downloaded.get(&chapter.url) {
                 if save_dir.join(path).exists() {
                     continue;
                 }
+            }
+
+            if let Some(delay) = &options.delay {
+                thread::sleep(*delay);
             }
 
             let content = runner.fetch_chapter_content(&chapter.url)?;

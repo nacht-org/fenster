@@ -9,6 +9,7 @@ use std::{
     io::{BufReader, BufWriter},
     path::{Path, PathBuf},
     process::exit,
+    time::Duration,
 };
 
 use anyhow::{anyhow, bail, Context};
@@ -58,6 +59,10 @@ enum Commands {
         /// The range of chapters to download
         #[arg(short, long)]
         range: Option<DownloadRange>,
+
+        /// Delay between each chapter download in milliseconds
+        #[arg(short, long)]
+        delay: Option<u32>,
     },
 
     Bundle {
@@ -108,7 +113,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             let lock = Lock::generate(&dir)?;
             lock.save(&cli.lock_file)?;
         }
-        Commands::Download { url, range } => {
+        Commands::Download { url, range, delay } => {
             let lock = Lock::open(&cli.lock_file)?;
             let Some(extension) = lock.detect(url.as_str())? else {
                 println!("supported source not found.");
@@ -118,6 +123,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             let options = DownloadOptions {
                 dir: cli.data_dir,
                 range: range.map(|r| r.0),
+                delay: delay.map(|v| Duration::from_millis(v as u64)),
             };
 
             download::download(url, PathBuf::from(&extension.path), options)?;
