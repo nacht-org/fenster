@@ -143,7 +143,7 @@ pub fn preface_content(meta: &Option<Meta>, novel: &Novel) -> String {
     let authors = if novel.authors.is_empty() {
         String::from("<p>Unknown Author</p>")
     } else {
-        format!("<ul><li>{}</li></ul>", novel.authors.join("</li><li>"))
+        format!("<p>{}</p>", novel.authors.join(", "))
     };
 
     let description = if novel.desc.is_empty() {
