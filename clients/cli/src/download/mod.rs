@@ -4,6 +4,7 @@ mod options;
 use std::path::PathBuf;
 
 pub use handler::{DATA_FILENAME, LOG_FILENAME};
+use log::warn;
 pub use options::DownloadOptions;
 use url::Url;
 
@@ -23,8 +24,10 @@ pub fn download(
     handler.save()?;
 
     if !handler.is_cover_downloaded() {
-        handler.download_cover()?;
-        handler.save()?;
+        match handler.download_cover() {
+            Ok(_) => handler.save()?,
+            Err(error) => warn!("{error}"),
+        }
     }
 
     global
