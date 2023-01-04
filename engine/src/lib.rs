@@ -42,7 +42,7 @@ pub fn ext_send_request(mut caller: Caller<'_, Data>, ptr: i32) -> i32 {
 
     let request = read_string(&mut caller, &memory, ptr);
     let request = serde_json::from_str::<Request>(request).unwrap();
-    println!("{request:?}");
+    debug!("Sending http request: {request:?}.");
 
     let client = &caller.data().client;
     let response = client.execute(reqwest::blocking::Request::new(

@@ -135,11 +135,7 @@ impl DownloadHandler {
             let path = chapter_dir.join(&filename);
             fs::write(&path, content)?;
 
-            info!(
-                "Chapter '{}' saved to '{}'.",
-                &chapter.title,
-                path.display()
-            );
+            info!("Downloaded '{}' to '{}'.", &chapter.title, path.display());
 
             log.push_event(EventKind::Downloaded {
                 url: chapter.url.clone(),
