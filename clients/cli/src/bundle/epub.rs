@@ -11,7 +11,7 @@ use indoc::formatdoc;
 use itertools::Itertools;
 use log::{info, warn};
 
-use crate::data::TrackingData;
+use crate::data::{CoverData, TrackingData};
 
 pub fn compile_epub(
     meta: Option<Meta>,
@@ -27,8 +27,8 @@ pub fn compile_epub(
         .title("Preface")
         .reftype(ReferenceType::Preface);
 
-    if let Some(path) = &data.cover_path {
-        add_cover_image(&mut builder, path)?;
+    if let Some(cover) = &data.cover {
+        set_cover_image(&mut builder, cover)?;
     }
 
     builder.metadata("title", &novel.title)?;
@@ -102,27 +102,22 @@ pub fn empty_content(chapter: &Chapter) -> String {
     "#}
 }
 
-fn add_cover_image(
+fn set_cover_image(
     builder: &mut EpubBuilder<ZipLibrary>,
-    cover_path: &Path,
+    cover: &CoverData,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let guess = mime_guess::from_path(&cover_path);
-    if let Some(mime) = guess.first() {
-        if cover_path.exists() {
-            let file = File::open(&cover_path)?;
-            let name = cover_path
-                .file_name()
-                .map(|name| name.to_string_lossy().to_string())
-                .unwrap_or_else(|| {
-                    let suffix = mime.suffix().map(|s| s.as_str()).unwrap_or_default();
-                    format!("cover.{suffix}")
-                });
+    if cover.path.exists() {
+        let file = File::open(&cover.path)?;
+        let name = cover
+            .path
+            .file_name()
+            .map(|name| name.to_string_lossy().to_string())
+            .unwrap_or_else(|| String::from("cover.unknwon"));
 
-            builder.add_cover_image(name, file, mime.essence_str())?;
-            info!("Written cover file '{}'", cover_path.display());
-        } else {
-            warn!("The cover file could not be found.");
-        }
+        builder.add_cover_image(name, file, &cover.content_type)?;
+        info!("Written cover file '{}'", cover.path.display());
+    } else {
+        warn!("The cover file could not be found.");
     }
 
     Ok(())
