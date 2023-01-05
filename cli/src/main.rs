@@ -1,18 +1,13 @@
-mod args;
 mod build;
-mod bundle;
 mod lock;
 
-use std::{fs::File, io::BufReader, ops::RangeInclusive, path::PathBuf, str::FromStr};
+use std::{fs::File, io::BufReader, path::PathBuf};
 
-use args::download_range::DownloadRange;
 use clap::{Parser, Subcommand};
 use fenster_engine::Runner;
 use lock::Lock;
 use simplelog::{Config, LevelFilter, TermLogger};
 use url::Url;
-
-use crate::bundle::DownloadOptions;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -52,7 +47,7 @@ enum Commands {
         extension: Option<PathBuf>,
 
         /// The output directory for the built extensions
-        #[arg(short, long, default_value = "dist")]
+        #[arg(short, long, default_value = "extensions")]
         out: PathBuf,
     },
 
@@ -68,19 +63,6 @@ enum Commands {
         /// The path to the lock file
         #[arg(short, long, default_value = "dist/lock.json")]
         lock: PathBuf,
-    },
-
-    Download {
-        /// The url to the novel
-        url: Url,
-
-        /// The path to the source wasm
-        #[arg(short, long)]
-        wasm: PathBuf,
-
-        /// The range of chapters to download
-        #[arg(short, long)]
-        range: Option<DownloadRange>,
     },
 }
 
@@ -147,14 +129,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Lock { dir } => {
             lock::lock(dir)?;
-        }
-        Commands::Download { url, wasm, range } => {
-            let options = DownloadOptions {
-                range: range.map(|r| r.0),
-                ..Default::default()
-            };
-
-            bundle::download(url, wasm, options)?;
         }
     }
 

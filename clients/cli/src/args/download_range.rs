@@ -13,7 +13,7 @@ impl FromStr for DownloadRange {
         if s.contains("..=") {
             let (start_in, end_in) = match s.split_once("..=") {
                 Some(v) => v,
-                None => bail!("must contain only a single sequence of '..'"),
+                None => bail!("must contain only a single sequence of '..='"),
             };
 
             let start_in = start_in.parse::<usize>()?;

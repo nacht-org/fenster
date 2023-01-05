@@ -1,11 +1,13 @@
 [workspace]
 members = [
-    "cli", "glue", "glue_derive", "engine", "core", "extensions/novelpub", "extensions/royalroad",
+    "cli", "glue", "glue_derive", "engine", "core",
+    "extensions/novelpub", "extensions/royalroad",
+    "clients/cli",
 ]
 
 [profile.release]
 opt-level = "z"
 lto = true
 codegen-units = 1
-panic = 'abort' 
+panic = 'abort'
 strip = true

@@ -81,10 +81,10 @@ const DUBLIN_CORE: [&'static str; 10] = [
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Metadata {
-    name: String,
-    value: String,
-    ns: Namespace,
-    others: HashMap<String, String>,
+    pub name: String,
+    pub value: String,
+    pub ns: Namespace,
+    pub others: HashMap<String, String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
