@@ -8,7 +8,10 @@ use log::warn;
 pub use options::DownloadOptions;
 use url::Url;
 
-use crate::data::{GlobalTracker, NovelTracking};
+use crate::{
+    args::CoverAction,
+    data::{GlobalTracker, NovelTracking},
+};
 
 use self::handler::DownloadHandler;
 
@@ -23,11 +26,14 @@ pub fn download(
     let mut handler = DownloadHandler::new(url, wasm_path, options)?;
     handler.save()?;
 
-    if !handler.is_cover_downloaded() {
-        match handler.download_cover() {
-            Ok(_) => handler.save()?,
-            Err(error) => warn!("{error}"),
+    match &handler.options.cover {
+        CoverAction::Dynamic => {
+            if !handler.is_cover_downloaded() {
+                download_cover_and_warn(&mut handler)?;
+            }
         }
+        CoverAction::Force => download_cover_and_warn(&mut handler)?,
+        CoverAction::Ignore => (),
     }
 
     global
@@ -39,4 +45,14 @@ pub fn download(
     handler.save()?;
 
     Ok(handler.tracking)
+}
+
+fn download_cover_and_warn(handler: &mut DownloadHandler) -> Result<(), anyhow::Error> {
+    match handler.download_cover() {
+        Ok(_) => handler.save(),
+        Err(error) => {
+            warn!("{error}");
+            Ok(())
+        }
+    }
 }

@@ -13,7 +13,7 @@ use std::{
 };
 
 use anyhow::{anyhow, bail, Context};
-use args::download_range::DownloadRange;
+use args::{CoverAction, DownloadRange};
 use clap::{Parser, Subcommand};
 use data::{GlobalTracker, NovelTracking};
 use download::DownloadOptions;
@@ -63,6 +63,10 @@ enum Commands {
         /// Delay between each chapter download in milliseconds
         #[arg(short, long)]
         delay: Option<u32>,
+
+        /// How the novel cover download should be handled
+        #[arg(short, long, default_value = "dynamic")]
+        cover: CoverAction,
     },
 
     Bundle {
@@ -113,7 +117,12 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             let lock = Lock::generate(&dir)?;
             lock.save(&cli.lock_file)?;
         }
-        Commands::Download { url, range, delay } => {
+        Commands::Download {
+            url,
+            range,
+            delay,
+            cover,
+        } => {
             let lock = Lock::open(&cli.lock_file)?;
             let Some(extension) = lock.detect(url.as_str())? else {
                 println!("supported source not found.");
@@ -124,6 +133,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 dir: cli.data_dir,
                 range: range.map(|r| r.0),
                 delay: delay.map(|v| Duration::from_millis(v as u64)),
+                cover,
             };
 
             download::download(url, PathBuf::from(&extension.path), options)?;
