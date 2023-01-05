@@ -53,7 +53,7 @@ enum Commands {
 
     Lock {
         /// The directory to find wasm extensions
-        #[arg(short, long, default_value = "dist")]
+        #[arg(short, long, default_value = ".")]
         dir: PathBuf,
     },
 
@@ -61,7 +61,7 @@ enum Commands {
         url: Url,
 
         /// The path to the lock file
-        #[arg(short, long, default_value = "dist/lock.json")]
+        #[arg(short, long, default_value = "extension-lock.json")]
         lock: PathBuf,
     },
 }

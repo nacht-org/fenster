@@ -66,12 +66,12 @@ pub fn lock(dir: PathBuf) -> anyhow::Result<()> {
             .create(true)
             .write(true)
             .truncate(true)
-            .open("dist/lock.json")?;
+            .open("extension-lock.json")?;
 
         serde_json::to_writer_pretty(&mut file, &lock)?;
     }
 
-    info!("generated lock file at 'dist/lock.json'");
+    info!("generated lock file at 'extension-lock.json'");
 
     Ok(())
 }
