@@ -7,13 +7,14 @@ use std::{
 };
 
 use anyhow::bail;
+use fenster_bundle::CoverData;
 use fenster_core::prelude::{Chapter, Meta, Novel};
 use fenster_engine::Runner;
 use log::info;
 use reqwest::{blocking::Client, header::CONTENT_TYPE};
 use url::Url;
 
-use crate::data::{CoverData, DownloadLog, EventKind, NovelTracking};
+use crate::data::{DownloadLog, EventKind, NovelTracking};
 
 use super::DownloadOptions;
 

@@ -7,6 +7,7 @@ use std::{
 
 use anyhow::Context;
 use chrono::{DateTime, Utc};
+use fenster_bundle::CoverData;
 use fenster_core::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -22,12 +23,6 @@ pub struct TrackingData {
     pub cover: Option<CoverData>,
     pub downloaded: HashMap<String, PathBuf>,
     pub updated_at: DateTime<Utc>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct CoverData {
-    pub path: PathBuf,
-    pub content_type: String,
 }
 
 impl NovelTracking {

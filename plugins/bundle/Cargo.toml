@@ -1,0 +1,18 @@
+[package]
+name = "fenster_bundle"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+epub-builder = { version = "0.5.0", optional = true }
+fenster_core = { version = "0.1.0", path = "../../core" }
+indoc = { version = "1.0.8", optional = true }
+itertools = "0.10.5"
+log = "0.4.17"
+serde = { version = "1.0.152", features = ["derive"] }
+
+[features]
+default = ["epub"]
+epub = ["dep:epub-builder", "dep:indoc"]

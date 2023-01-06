@@ -29,12 +29,12 @@ impl Meta {
             let base_url = Url::parse(current.unwrap_or(&self.base_urls[0]))
                 .map_err(|_| ParseError::FailedURLParse)?;
             url.insert_str(0, base_url.scheme());
-        } else if url.starts_with("/") {
+        } else if url.starts_with('/') {
             let base_url = &self.base_urls[0];
-            let base_url = base_url.strip_suffix("/").unwrap_or(base_url);
+            let base_url = base_url.strip_suffix('/').unwrap_or(base_url);
             url.insert_str(0, base_url);
         } else if let Some(current) = current {
-            let base_url = current.strip_suffix("/").unwrap_or(current);
+            let base_url = current.strip_suffix('/').unwrap_or(current);
             url.insert_str(0, base_url);
         }
 
@@ -66,7 +66,7 @@ pub struct Novel {
     pub lang: String,
 }
 
-const DUBLIN_CORE: [&'static str; 10] = [
+const DUBLIN_CORE: [&str; 10] = [
     "title",
     "language",
     "subject",

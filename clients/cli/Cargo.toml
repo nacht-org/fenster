@@ -9,10 +9,9 @@ edition = "2021"
 anyhow = "1.0.66"
 chrono = "0.4.23"
 clap = { version = "4.0.26", features = ["derive"] }
-epub-builder = { version = "0.5.0" }
+fenster_bundle = { version = "0.1.0", path = "../../plugins/bundle" }
 fenster_core = { version = "0.1.0", path = "../../core" }
 fenster_engine = { version = "0.1.0", path = "../../engine" }
-indoc = "1.0.8"
 itertools = "0.10.5"
 log = "0.4.17"
 mime_guess = "2.0.4"
