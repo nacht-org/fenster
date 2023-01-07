@@ -57,15 +57,15 @@ impl Lock {
                 continue;
             }
 
-            info!("collecting meta info from '{}'...", path.display());
+            info!("Reading meta info from '{}'...", path.display());
             let mut runner = Runner::new(&path).map_err(|e| anyhow!(e.to_string()))?;
             let meta = runner.meta().map_err(|e| anyhow!(e.to_string()))?;
 
             if let Some(Extension { name, .. }) = extensions.get(&meta.id) {
-                bail!("both '{}' and '{}' have the same id", name, &meta.name);
+                bail!("Both '{}' and '{}' have the same id", name, &meta.name);
             }
 
-            println!("Found {}=={}", meta.id, meta.version);
+            info!("Found {}=={}", meta.id, meta.version);
 
             let extension = Extension {
                 name: meta.name,
