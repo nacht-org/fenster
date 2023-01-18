@@ -48,22 +48,23 @@ pub fn bundle_epub(
         builder.metadata("author", author)?;
     }
 
-    for paragraph in &novel.desc {
+    for paragraph in &novel.description {
         builder.metadata("description", paragraph)?;
     }
 
     info!("Written title, authors, and description");
 
     for metadata in &novel.metadata {
-        if metadata.name != "subject" {
-            continue;
+        if ["title", "author", "subject", "language"].contains(&metadata.name.as_str()) {
+            builder.metadata(&metadata.name, &metadata.value)?;
         }
-
-        builder.metadata(&metadata.name, &metadata.value)?;
     }
 
     builder.metadata("generator", "fenster")?;
-    builder.metadata("lang", &novel.lang)?;
+
+    for lang in &novel.langs {
+        builder.metadata("language", lang)?;
+    }
 
     info!("Written metadata");
 
@@ -148,15 +149,15 @@ pub fn preface_content(_meta: &Option<Meta>, novel: &Novel) -> String {
     let url = &novel.url;
 
     let authors = if novel.authors.is_empty() {
-        String::from("<p>Unknown Author</p>")
+        String::from("<p>Unknown author</p>")
     } else {
         format!("<p>{}</p>", novel.authors.join(", "))
     };
 
-    let description = if novel.desc.is_empty() {
+    let description = if novel.description.is_empty() {
         String::from("<p>No description provided</p>")
     } else {
-        format!("<p>{}</p>", novel.desc.join("</p><p>"))
+        format!("<p>{}</p>", novel.description.join("</p><p>"))
     };
 
     let metadata = {

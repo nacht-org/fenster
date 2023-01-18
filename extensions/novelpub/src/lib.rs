@@ -13,7 +13,7 @@ lazy_static! {
     static ref META: Meta = Meta {
         id: String::from("en.novelpub"),
         name: String::from("NovelPub"),
-        lang: String::from("en"),
+        langs: vec![String::from("en")],
         version: String::from(env!("CARGO_PKG_VERSION")),
         base_urls: vec![String::from("https://www.novelpub.com/")],
         rds: vec![ReadingDirection::Ltr],
@@ -52,12 +52,12 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
     let novel = Novel {
         title: doc.select_first(".novel-title").get_text()?,
         authors: doc.select(".author a").collect_text(),
-        desc: doc.select(".summary .content p").collect_text(),
-        thumb: doc.select_first(".cover img").get_attribute("data-src"),
+        description: doc.select(".summary .content p").collect_text(),
+        cover: doc.select_first(".cover img").get_attribute("data-src"),
         status,
         volumes: collect_toc(&url)?,
         metadata: collect_metadata(&doc),
-        lang: META.lang.clone(),
+        langs: META.langs.clone(),
         url,
     };
 

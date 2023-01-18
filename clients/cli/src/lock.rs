@@ -22,7 +22,7 @@ pub struct Extension {
     pub name: String,
     pub version: String,
     pub base_urls: Vec<String>,
-    pub lang: String,
+    pub langs: Vec<String>,
     pub path: String,
 }
 
@@ -71,7 +71,7 @@ impl Lock {
                 name: meta.name,
                 version: meta.version,
                 base_urls: meta.base_urls,
-                lang: meta.lang,
+                langs: meta.langs,
                 path: entry.path().as_os_str().to_string_lossy().to_string(),
             };
 

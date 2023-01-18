@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -10,7 +10,7 @@ use crate::error::ParseError;
 pub struct Meta {
     pub id: String,
     pub name: String,
-    pub lang: String,
+    pub langs: Vec<String>,
     pub version: String,
     pub base_urls: Vec<String>,
     pub rds: Vec<ReadingDirection>,
@@ -58,25 +58,48 @@ pub struct Novel {
     pub title: String,
     pub authors: Vec<String>,
     pub url: String,
-    pub thumb: Option<String>,
-    pub desc: Vec<String>,
+    pub cover: Option<String>,
+    pub description: Vec<String>,
     pub volumes: Vec<Volume>,
     pub metadata: Vec<Metadata>,
     pub status: NovelStatus,
-    pub lang: String,
+    pub langs: Vec<String>,
 }
 
-const DUBLIN_CORE: [&str; 10] = [
-    "title",
-    "language",
-    "subject",
-    "creator",
+/// https://www.dublincore.org/specifications/dublin-core/dces/
+pub const DUBLIN_CORE: [&str; 16] = [
+    // An entity responsible for making contributions to the resource.
     "contributor",
-    "publisher",
-    "rights",
+    // The spatial or temporal topic of the resource, the spatial applicability of the resource, or the jurisdiction under which the resource is relevant.
     "coverage",
+    // An entity primarily responsible for making the resource.
+    "creator",
+    // point or period of time associated with an event in the lifecycle of the resource.
     "date",
+    // An account of the resource.
     "description",
+    // The file format, physical medium, or dimensions of the resource.
+    "format",
+    // Information about rights held in and over the resource.
+    "rights",
+    // The topic of the resource.
+    "subject",
+    // A name given to the resource.
+    "title",
+    // A related resource from which the described resource is derived.
+    "source",
+    // Information about rights held in and over the resource.
+    "rights",
+    // A related resource.
+    "relation",
+    // An entity responsible for making the resource available.
+    "publisher",
+    // A language of the resource.
+    "language",
+    // An unambiguous reference to the resource within a given context.An unambiguous reference to the resource within a given context.
+    "identifier",
+    // The nature or genre of the resource
+    "type",
 ];
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -137,22 +160,8 @@ pub struct Chapter {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum TaggedDateTime {
-    Utc(DateTime<Utc>),
+    Utc(NaiveDateTime),
     Local(NaiveDateTime),
-}
-
-impl From<DateTime<Utc>> for TaggedDateTime {
-    #[inline]
-    fn from(value: DateTime<Utc>) -> Self {
-        Self::Utc(value)
-    }
-}
-
-impl From<NaiveDateTime> for TaggedDateTime {
-    #[inline]
-    fn from(value: NaiveDateTime) -> Self {
-        Self::Local(value)
-    }
 }
 
 #[derive(Serialize, Deserialize, Default, Debug)]

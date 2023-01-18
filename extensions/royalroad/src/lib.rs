@@ -2,7 +2,7 @@
 #[macro_use]
 extern crate fenster_glue;
 
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::NaiveDateTime;
 use fenster_core::prelude::*;
 use fenster_glue::prelude::*;
 use kuchiki::{
@@ -15,7 +15,7 @@ lazy_static! {
     static ref META: Meta = Meta {
         id: String::from("en.royalroad"),
         name: String::from("RoyalRoad"),
-        lang: String::from("en"),
+        langs: vec![String::from("en")],
         version: String::from(env!("CARGO_PKG_VERSION")),
         base_urls: vec![String::from("https://www.royalroad.com")],
         rds: vec![ReadingDirection::Ltr],
@@ -48,17 +48,17 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
     let novel = Novel {
         title: doc.select_first("h1[property='name']").get_text()?,
         authors: vec![author],
-        thumb: doc
+        cover: doc
             .select_first(".page-content-inner .thumbnail")
             .get_attribute("src"),
-        desc: doc
+        description: doc
             .select(r#".description > [property="description"] > p"#)
             .collect_text(),
         status: doc
             .select_first(".widget_fic_similar > li:last-child > span:last-child")
             .map(|node| node.text_contents().as_str().into())
             .unwrap_or_default(),
-        lang: META.lang.to_string(),
+        langs: META.langs.clone(),
         volumes: vec![volume],
         metadata: doc
             .select(r#"a.label[href*="tag"]"#)
@@ -109,8 +109,7 @@ fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Result<Vec<Chapte
             .flatten()
             .map(|timestamp| NaiveDateTime::from_timestamp_opt(timestamp, 0))
             .flatten()
-            .map(|naive| DateTime::from_utc(naive, Utc))
-            .map(|dt| dt.into());
+            .map(TaggedDateTime::Local);
 
         let url = link
             .attributes

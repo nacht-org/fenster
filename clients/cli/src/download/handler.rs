@@ -164,7 +164,7 @@ impl DownloadHandler {
 
     pub fn download_cover(&mut self) -> anyhow::Result<()> {
         let data = &mut self.tracking.data;
-        let Some(url) = data.novel.thumb.as_ref() else { return Ok(()) };
+        let Some(url) = data.novel.cover.as_ref() else { return Ok(()) };
 
         let client = Client::builder()
             .user_agent(
