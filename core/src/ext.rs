@@ -18,7 +18,7 @@ pub struct Meta {
 }
 
 impl Meta {
-    pub fn derive_abs_url(
+    pub fn convert_into_absolute_url(
         &self,
         mut url: String,
         current: Option<&str>,

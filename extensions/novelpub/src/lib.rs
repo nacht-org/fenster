@@ -176,7 +176,7 @@ fn extract_toc(doc: &NodeRef, volume: &mut Volume) -> Result<(), FensterError> {
         let chapter = Chapter {
             index,
             title: format!("{} {}", chapter_no.trim(), chapter_title.clean_text()),
-            url: META.derive_abs_url(url, None)?,
+            url: META.convert_into_absolute_url(url, None)?,
             updated_at,
         };
 
