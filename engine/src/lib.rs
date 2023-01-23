@@ -74,7 +74,7 @@ fn parse_response(
 
     Ok(Response {
         status: response.status().as_u16() as usize,
-        body: response.text().ok(),
+        body: response.bytes().map(|data| data.to_vec()).ok(),
         headers: Some(headers),
     })
 }

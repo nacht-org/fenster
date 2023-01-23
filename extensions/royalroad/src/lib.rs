@@ -30,7 +30,7 @@ pub fn meta() -> &'static Meta {
 #[expose]
 pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
     let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.body.unwrap());
+    let doc = kuchiki::parse_html().one(response.text().unwrap());
 
     let volume = Volume {
         chapters: doc
@@ -75,7 +75,7 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
 #[expose]
 pub fn fetch_chapter_content(url: String) -> Result<Option<String>, FensterError> {
     let response = Request::get(url).send()?;
-    let doc = kuchiki::parse_html().one(response.body.unwrap());
+    let doc = kuchiki::parse_html().one(response.text().unwrap());
 
     let content = doc
         .select_first(".chapter-content")

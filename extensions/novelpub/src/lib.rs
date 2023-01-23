@@ -28,7 +28,7 @@ pub fn meta() -> &'static Meta {
 #[expose]
 pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
     let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.body.unwrap());
+    let doc = kuchiki::parse_html().one(response.text().unwrap());
 
     let mut status = NovelStatus::default();
     if let Some(nodes) = doc.select(".header-stats span").ok() {
@@ -100,7 +100,7 @@ fn collect_toc(url: &str) -> Result<Vec<Volume>, FensterError> {
     // parse the first page
     let curl = toc_url(url, 1);
     let response = Request::get(curl).send()?;
-    let doc = kuchiki::parse_html().one(response.body.unwrap());
+    let doc = kuchiki::parse_html().one(response.text().unwrap());
     extract_toc(&doc, &mut volume)?;
 
     // get page count
@@ -131,7 +131,7 @@ fn collect_toc(url: &str) -> Result<Vec<Volume>, FensterError> {
         for page in 2..=end {
             let curl = toc_url(url, page);
             let response = Request::get(curl).send()?;
-            let doc = kuchiki::parse_html().one(response.body.unwrap());
+            let doc = kuchiki::parse_html().one(response.text().unwrap());
             extract_toc(&doc, &mut volume)?;
         }
     }
@@ -194,7 +194,7 @@ fn toc_url(current: &str, page: usize) -> String {
 #[expose]
 pub fn fetch_chapter_content(url: String) -> Result<String, FensterError> {
     let response = Request::get(url).send()?;
-    let doc = kuchiki::parse_html().one(response.body.unwrap());
+    let doc = kuchiki::parse_html().one(response.text().unwrap());
 
     let content = doc
         .select_first("#chapter-container")

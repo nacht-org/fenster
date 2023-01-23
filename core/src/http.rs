@@ -62,8 +62,17 @@ pub enum Method {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Response {
     pub status: usize,
-    pub body: Option<String>,
+    pub body: Option<Vec<u8>>,
     pub headers: Option<String>,
+}
+
+impl Response {
+    pub fn text(&self) -> Option<&str> {
+        self.body
+            .as_ref()
+            .map(|body| std::str::from_utf8(body).ok())
+            .flatten()
+    }
 }
 
 #[derive(Serialize, Deserialize, thiserror::Error, Debug)]
