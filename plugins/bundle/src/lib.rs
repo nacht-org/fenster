@@ -5,4 +5,4 @@ mod data;
 #[cfg(feature = "epub")]
 pub mod epub;
 
-pub use data::CoverData;
+pub use data::{Bundle, CoverData};

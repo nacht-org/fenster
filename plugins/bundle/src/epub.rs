@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     fs::{self, File},
     io::BufWriter,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
@@ -11,14 +11,7 @@ use indoc::formatdoc;
 use itertools::Itertools;
 use log::{info, warn};
 
-use crate::data::CoverData;
-
-pub struct Bundle {
-    pub meta: Option<Meta>,
-    pub novel: Novel,
-    pub cover: Option<CoverData>,
-    pub chapter_content: HashMap<String, PathBuf>,
-}
+use crate::data::{Bundle, CoverData};
 
 pub fn bundle_epub(
     bundle: Bundle,
