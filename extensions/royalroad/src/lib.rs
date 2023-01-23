@@ -2,8 +2,6 @@
 #[macro_use]
 extern crate fenster_glue;
 
-use std::sync::Mutex;
-
 use chrono::NaiveDateTime;
 use fenster_core::prelude::*;
 use fenster_glue::prelude::*;
