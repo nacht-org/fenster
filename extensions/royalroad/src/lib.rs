@@ -2,6 +2,8 @@
 #[macro_use]
 extern crate fenster_glue;
 
+use std::sync::Mutex;
+
 use chrono::NaiveDateTime;
 use fenster_core::prelude::*;
 use fenster_glue::prelude::*;
@@ -9,19 +11,17 @@ use kuchiki::{
     iter::{Descendants, Elements, Select},
     traits::TendrilSink,
 };
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
-lazy_static! {
-    static ref META: Meta = Meta {
-        id: String::from("en.royalroad"),
-        name: String::from("RoyalRoad"),
-        langs: vec![String::from("en")],
-        version: String::from(env!("CARGO_PKG_VERSION")),
-        base_urls: vec![String::from("https://www.royalroad.com")],
-        rds: vec![ReadingDirection::Ltr],
-        attrs: vec![],
-    };
-}
+static META: Lazy<Meta> = Lazy::new(|| Meta {
+    id: String::from("en.royalroad"),
+    name: String::from("RoyalRoad"),
+    langs: vec![String::from("en")],
+    version: String::from(env!("CARGO_PKG_VERSION")),
+    base_urls: vec![String::from("https://www.royalroad.com")],
+    rds: vec![ReadingDirection::Ltr],
+    attrs: vec![],
+});
 
 #[expose]
 pub fn meta() -> &'static Meta {
