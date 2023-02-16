@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "cli", "glue", "glue_derive", "engine", "core",
+    "packages/cli", "packages/glue", "packages/glue_derive", "packages/engine", "packages/core",
     "extensions/novelpub", "extensions/royalroad",
     "plugins/bundle",
     "clients/cli",
