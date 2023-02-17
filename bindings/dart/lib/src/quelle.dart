@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
 
 import 'bindings/bindings.dart';
 import 'bindings/types.dart' as types;
+import 'models/models.dart';
 
 class Quelle {
   final String path;
@@ -40,6 +42,11 @@ class Quelle {
     return json;
   }
 
+  Meta meta() {
+    final map = jsonDecode(metaJson());
+    return Meta.parse(map);
+  }
+
   QuelleException _readError() {
     Pointer<Pointer<Utf8>> buffer = calloc();
     bindings.last_error_message(buffer);
@@ -51,9 +58,18 @@ class Quelle {
 }
 
 class EngineResource implements Finalizable {
-  late Pointer<types.Engine> _engine;
+  static final NativeFinalizer _finalizer = NativeFinalizer(posixFree);
 
-  EngineResource(this._engine);
+  late final Pointer<types.Engine> _engine;
+
+  EngineResource(this._engine) {
+    _finalizer.attach(this, _engine.cast(), detach: this);
+  }
+
+  void free() {
+    _finalizer.detach(this);
+    calloc.free(_engine);
+  }
 
   Pointer<types.Engine> unsafe() => _engine;
 }
