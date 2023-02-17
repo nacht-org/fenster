@@ -1,4 +1,4 @@
-name: quille
+name: quelle
 description: A sample command-line application.
 version: 1.0.0
 # repository: https://github.com/my_org/my_repo
@@ -11,14 +11,5 @@ dependencies:
 #   path: ^1.8.0
 
 dev_dependencies:
-  ffigen: ^7.2.6
   lints: ^2.0.0
   test: ^1.21.0
-
-ffigen:
-  name: Quille
-  description: 'Bindings to Quille'
-  output: 'lib/bindings/generated_bindings.dart'
-  headers: 
-    entry-points:
-      - 'lib/bindings/bindings.h'

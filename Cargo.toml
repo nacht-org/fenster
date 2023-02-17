@@ -4,6 +4,7 @@ members = [
     "extensions/novelpub", "extensions/royalroad",
     "plugins/bundle",
     "clients/cli",
+    "bindings/native",
 ]
 
 [profile.release]
