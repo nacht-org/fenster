@@ -14,7 +14,8 @@ class QuelleBindings {
   late int Function(Pointer<Utf8> path, Pointer<Pointer<Engine>> engine_out)
       open_engine_with_path;
 
-  late int Function(Pointer<Engine> engine) source_meta;
+  late int Function(Pointer<Engine> engine, Pointer<Pointer<Utf8>> out)
+      source_meta;
 
   QuelleBindings() {
     quelle = loadDynamicLibrary();

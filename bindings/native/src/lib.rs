@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_char, CStr},
+    ffi::{c_char, CStr, CString},
     mem,
     path::Path,
 };
@@ -30,9 +30,14 @@ pub extern "C" fn open_engine_with_path(path: *const c_char, engine_out: *mut *m
 }
 
 #[no_mangle]
-pub extern "C" fn source_meta(engine: *mut Runner) -> i32 {
+pub extern "C" fn source_meta(engine: *mut Runner, out: *mut *mut c_char) -> i32 {
     let engine = unsafe { engine.as_mut().unwrap() };
-    println!("{:?}", engine.meta());
+    let meta = engine.meta_raw().unwrap();
+    let meta = CString::new(meta).unwrap();
+
+    // The caller is responsible for handling the output
+    unsafe { *out = meta.as_ptr() as *mut c_char };
+    mem::forget(meta);
 
     0
 }

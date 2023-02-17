@@ -17,11 +17,17 @@ class Quelle {
     _engine = EngineResource(engineOut.value);
     calloc.free(engineOut);
     pathC.free();
-
-    print(_engine._engine);
   }
 
-  void meta() => _engine.meta();
+  void meta() {
+    Pointer<Pointer<Utf8>> out = calloc();
+    final result = bindings.source_meta(_engine.unsafe(), out);
+    final meta = out.value.toDartString();
+    calloc.free(out.value);
+    calloc.free(out);
+    print(result);
+    print(meta);
+  }
 }
 
 class EngineResource implements Finalizable {
@@ -29,9 +35,7 @@ class EngineResource implements Finalizable {
 
   EngineResource(this._engine);
 
-  void meta() {
-    bindings.source_meta(_engine);
-  }
+  Pointer<types.Engine> unsafe() => _engine;
 }
 
 class Utf8Resource implements Finalizable {

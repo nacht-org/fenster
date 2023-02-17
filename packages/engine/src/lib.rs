@@ -238,6 +238,18 @@ impl Runner {
         Ok(meta)
     }
 
+    pub fn meta_raw(&mut self) -> Result<String, crate::error::Error> {
+        let ptr = self.functions.meta.call(&mut self.store, ())?;
+
+        let bytes = self.read_bytes(ptr)?;
+        let meta = String::from_utf8_lossy(bytes).to_string();
+
+        let len = bytes.len() as i32;
+        self.dealloc_memory(ptr, len)?;
+
+        Ok(meta)
+    }
+
     pub fn fetch_novel(&mut self, url: &str) -> crate::error::Result<Novel> {
         let iptr = self.write_string(url)?;
         let rptr = self.functions.fetch_novel.call(&mut self.store, iptr)?;
