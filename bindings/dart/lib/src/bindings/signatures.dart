@@ -11,3 +11,6 @@ typedef open_engine_with_path_native_t = Int32 Function(
 
 typedef source_meta_native_t = Int32 Function(
     Pointer<Engine> engine, Pointer<Pointer<Utf8>> out);
+
+typedef last_error_message_native_t = Int32 Function(
+    Pointer<Pointer<Utf8>> buffer);

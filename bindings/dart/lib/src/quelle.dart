@@ -13,20 +13,40 @@ class Quelle {
   Quelle(this.path) {
     Pointer<Pointer<types.Engine>> engineOut = calloc();
     final pathC = Utf8Resource(path.toNativeUtf8());
-    final result = bindings.open_engine_with_path(pathC.unsafe(), engineOut);
-    _engine = EngineResource(engineOut.value);
-    calloc.free(engineOut);
-    pathC.free();
+
+    try {
+      final result = bindings.open_engine_with_path(pathC.unsafe(), engineOut);
+      if (result != 0) throw _readError();
+      _engine = EngineResource(engineOut.value);
+    } finally {
+      calloc.free(engineOut);
+      pathC.free();
+    }
   }
 
-  void meta() {
+  String metaJson() {
     Pointer<Pointer<Utf8>> out = calloc();
-    final result = bindings.source_meta(_engine.unsafe(), out);
-    final meta = out.value.toDartString();
-    calloc.free(out.value);
-    calloc.free(out);
-    print(result);
-    print(meta);
+    String json;
+
+    try {
+      final result = bindings.source_meta(_engine.unsafe(), out);
+      if (result != 0) throw _readError();
+      json = out.value.toDartString();
+    } finally {
+      calloc.free(out.value);
+      calloc.free(out);
+    }
+
+    return json;
+  }
+
+  QuelleException _readError() {
+    Pointer<Pointer<Utf8>> buffer = calloc();
+    bindings.last_error_message(buffer);
+    final errorMessage = buffer.value.toDartString();
+    calloc.free(buffer.value);
+    calloc.free(buffer);
+    return QuelleException(errorMessage);
   }
 }
 
@@ -60,3 +80,12 @@ class Utf8Resource implements Finalizable {
 
 final DynamicLibrary stdlib = DynamicLibrary.process();
 final posixFree = stdlib.lookup<NativeFunction<Void Function(Pointer)>>("free");
+
+class QuelleException implements Exception {
+  final String message;
+
+  QuelleException(this.message);
+
+  @override
+  String toString() => "QuelleException: $message";
+}

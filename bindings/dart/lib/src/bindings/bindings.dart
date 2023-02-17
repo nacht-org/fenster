@@ -17,6 +17,8 @@ class QuelleBindings {
   late int Function(Pointer<Engine> engine, Pointer<Pointer<Utf8>> out)
       source_meta;
 
+  late int Function(Pointer<Pointer<Utf8>> buffer) last_error_message;
+
   QuelleBindings() {
     quelle = loadDynamicLibrary();
 
@@ -26,6 +28,10 @@ class QuelleBindings {
         .asFunction();
     source_meta = quelle
         .lookup<NativeFunction<source_meta_native_t>>("source_meta")
+        .asFunction();
+    last_error_message = quelle
+        .lookup<NativeFunction<last_error_message_native_t>>(
+            "last_error_message")
         .asFunction();
   }
 }
