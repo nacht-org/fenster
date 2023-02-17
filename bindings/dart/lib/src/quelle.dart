@@ -66,6 +66,11 @@ class Quelle {
     return json;
   }
 
+  Novel fetchNovel(String url) {
+    final map = jsonDecode(fetchNovelJson(url));
+    return Novel.parse(map);
+  }
+
   QuelleException _readError() {
     Pointer<Pointer<Utf8>> buffer = calloc();
     bindings.last_error_message(buffer);
