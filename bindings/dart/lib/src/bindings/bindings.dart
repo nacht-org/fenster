@@ -14,8 +14,11 @@ class QuelleBindings {
   late int Function(Pointer<Utf8> path, Pointer<Pointer<Engine>> engine_out)
       open_engine_with_path;
 
-  late int Function(Pointer<Engine> engine, Pointer<Pointer<Utf8>> out)
+  late int Function(Pointer<Engine> engine, Pointer<Pointer<Utf8>> buffer)
       source_meta;
+
+  late int Function(Pointer<Engine> engine, Pointer<Utf8> url,
+      Pointer<Pointer<Utf8>> buffer) fetch_novel;
 
   late int Function(Pointer<Pointer<Utf8>> buffer) last_error_message;
 
@@ -28,6 +31,9 @@ class QuelleBindings {
         .asFunction();
     source_meta = quelle
         .lookup<NativeFunction<source_meta_native_t>>("source_meta")
+        .asFunction();
+    fetch_novel = quelle
+        .lookup<NativeFunction<fetch_novel_native_t>>("fetch_novel")
         .asFunction();
     last_error_message = quelle
         .lookup<NativeFunction<last_error_message_native_t>>(

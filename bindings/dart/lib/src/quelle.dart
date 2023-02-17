@@ -27,16 +27,16 @@ class Quelle {
   }
 
   String metaJson() {
-    Pointer<Pointer<Utf8>> out = calloc();
+    Pointer<Pointer<Utf8>> buffer = calloc();
     String json;
 
     try {
-      final result = bindings.source_meta(_engine.unsafe(), out);
+      final result = bindings.source_meta(_engine.unsafe(), buffer);
       if (result != 0) throw _readError();
-      json = out.value.toDartString();
+      json = buffer.value.toDartString();
     } finally {
-      calloc.free(out.value);
-      calloc.free(out);
+      calloc.free(buffer.value);
+      calloc.free(buffer);
     }
 
     return json;
@@ -45,6 +45,25 @@ class Quelle {
   Meta meta() {
     final map = jsonDecode(metaJson());
     return Meta.parse(map);
+  }
+
+  String fetchNovelJson(String url) {
+    final urlC = Utf8Resource(url.toNativeUtf8());
+    Pointer<Pointer<Utf8>> buffer = calloc();
+    String json;
+
+    try {
+      final result =
+          bindings.fetch_novel(_engine.unsafe(), urlC.unsafe(), buffer);
+      if (result != 0) throw _readError();
+      json = buffer.value.toDartString();
+    } finally {
+      urlC.free();
+      calloc.free(buffer.value);
+      calloc.free(buffer);
+    }
+
+    return json;
   }
 
   QuelleException _readError() {

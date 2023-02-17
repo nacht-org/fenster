@@ -10,7 +10,13 @@ typedef open_engine_with_path_native_t = Int32 Function(
     Pointer<Utf8> path, Pointer<Pointer<Engine>> engine_out);
 
 typedef source_meta_native_t = Int32 Function(
-    Pointer<Engine> engine, Pointer<Pointer<Utf8>> out);
+    Pointer<Engine> engine, Pointer<Pointer<Utf8>> buffer);
 
 typedef last_error_message_native_t = Int32 Function(
     Pointer<Pointer<Utf8>> buffer);
+
+typedef fetch_novel_native_t = Int32 Function(
+  Pointer<Engine> engine,
+  Pointer<Utf8> url,
+  Pointer<Pointer<Utf8>> buffer,
+);

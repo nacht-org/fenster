@@ -33,14 +33,44 @@ pub extern "C" fn source_meta(engine: *mut Runner, out: *mut *mut c_char) -> i32
     error::capture_error(|| source_meta_private(engine, out))
 }
 
-fn source_meta_private(engine: *mut Runner, out: *mut *mut c_char) -> Result<(), Box<dyn Error>> {
+fn source_meta_private(
+    engine: *mut Runner,
+    buffer: *mut *mut c_char,
+) -> Result<(), Box<dyn Error>> {
     let engine = unsafe { engine.as_mut().unwrap() };
-    let meta = engine.meta_raw().unwrap();
-    let meta = CString::new(meta).unwrap();
+    let meta = engine.meta_raw()?;
+    write_buffer(buffer, meta)?;
+    Ok(())
+}
 
+#[no_mangle]
+pub extern "C" fn fetch_novel(
+    engine: *mut Runner,
+    url: *mut c_char,
+    buffer: *mut *mut c_char,
+) -> i32 {
+    error::capture_error(|| fetch_novel_private(engine, url, buffer))
+}
+
+fn fetch_novel_private(
+    engine: *mut Runner,
+    url: *mut c_char,
+    buffer: *mut *mut c_char,
+) -> Result<(), Box<dyn Error>> {
+    let url = unsafe { CStr::from_ptr(url) }.to_str()?;
+    let engine = unsafe { engine.as_mut().unwrap() };
+
+    let novel = engine.fetch_novel(url)?;
+    let json = serde_json::to_string(&novel)?;
+    write_buffer(buffer, json)?;
+
+    Ok(())
+}
+
+fn write_buffer(buffer: *mut *mut c_char, string: String) -> Result<(), Box<dyn Error>> {
+    let cstring = CString::new(string)?;
     // The caller is responsible for handling the output
-    unsafe { *out = meta.as_ptr() as *mut c_char };
-    mem::forget(meta);
-
+    unsafe { *buffer = cstring.as_ptr() as *mut c_char };
+    mem::forget(cstring);
     Ok(())
 }
