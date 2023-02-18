@@ -20,3 +20,9 @@ typedef fetch_novel_native_t = Int32 Function(
   Pointer<Utf8> url,
   Pointer<Pointer<Utf8>> buffer,
 );
+
+typedef fetch_chapter_content_native_t = Int32 Function(
+  Pointer<Engine> engine,
+  Pointer<Utf8> url,
+  Pointer<Pointer<Utf8>> buffer,
+);

@@ -67,6 +67,29 @@ fn fetch_novel_private(
     Ok(())
 }
 
+#[no_mangle]
+pub extern "C" fn fetch_chapter_content(
+    engine: *mut Runner,
+    url: *mut c_char,
+    buffer: *mut *mut c_char,
+) -> i32 {
+    error::capture_error(|| fetch_chapter_content_private(engine, url, buffer))
+}
+
+fn fetch_chapter_content_private(
+    engine: *mut Runner,
+    url: *mut c_char,
+    buffer: *mut *mut c_char,
+) -> Result<(), Box<dyn Error>> {
+    let url = unsafe { CStr::from_ptr(url) }.to_str()?;
+    let engine = unsafe { engine.as_mut().unwrap() };
+
+    let content = engine.fetch_chapter_content(url)?;
+    write_buffer(buffer, content.unwrap_or_default())?;
+
+    Ok(())
+}
+
 fn write_buffer(buffer: *mut *mut c_char, string: String) -> Result<(), Box<dyn Error>> {
     let cstring = CString::new(string)?;
     // The caller is responsible for handling the output

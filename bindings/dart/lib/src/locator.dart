@@ -6,14 +6,14 @@ import 'dart:io';
 /// Throws [QuelleLocatorError] if the dynamic library could not be found.
 DynamicLibrary loadDynamicLibrary() {
   String locate(String libName) {
-    final dir = '$_wasmToolDir$libName';
+    final dir = '$_quelleToolDir$libName';
     final value = _packageRootUri(Platform.script.resolve('./')) ??
         _packageRootUri(Directory.current.uri);
     if (value != null) {
       return value.resolve(dir).toFilePath();
     } else {
       throw QuelleLocatorError(
-        'Wasm library not found. Did you run `$invocationString`?',
+        'Quelle library not found. Did you run `$invocationString`?',
       );
     }
   }
@@ -70,10 +70,10 @@ Uri libBuildOutDir(Uri root) {
   if (pkgRoot == null) {
     throw ArgumentError('Could not find "$_pkgConfigFile" within "$root".');
   }
-  return pkgRoot.resolve(_wasmToolDir);
+  return pkgRoot.resolve(_quelleToolDir);
 }
 
-const _wasmToolDir = '.dart_tool/wasm/';
+const _quelleToolDir = '.dart_tool/quelle/';
 
 const _pkgConfigFile = '.dart_tool/package_config.json';
 
