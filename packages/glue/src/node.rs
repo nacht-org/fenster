@@ -1,4 +1,4 @@
-use fenster_core::prelude::ParseError;
+use quelle_core::prelude::ParseError;
 use kuchiki::{
     iter::{Descendants, Elements, Select},
     ElementData, NodeDataRef, NodeRef,

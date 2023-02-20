@@ -7,8 +7,8 @@ use std::{
 
 use anyhow::Context;
 use chrono::{DateTime, Utc};
-use fenster_bundle::CoverData;
-use fenster_core::prelude::*;
+use quelle_bundle::CoverData;
+use quelle_core::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]

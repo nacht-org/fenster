@@ -4,4 +4,4 @@ pub use crate::node::*;
 pub use crate::out::set_panic_hook;
 
 // Re-export proc expose
-pub use fenster_glue_derive::expose;
+pub use quelle_glue_derive::expose;

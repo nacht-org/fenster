@@ -1,5 +1,5 @@
-use fenster_core::prelude::*;
-use fenster_glue::prelude::*;
+use quelle_core::prelude::*;
+use quelle_glue::prelude::*;
 
 fn main() {
     let response = http::send_request(Request {

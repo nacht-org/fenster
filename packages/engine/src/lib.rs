@@ -1,8 +1,8 @@
 pub mod error;
 
 use error::Error;
-use fenster_core::prelude::*;
 use log::{debug, info, trace};
+use quelle_core::prelude::*;
 use reqwest::blocking::Client;
 use std::{path::Path, slice, str::FromStr};
 use wasmtime::*;
@@ -255,7 +255,7 @@ impl Runner {
         let rptr = self.functions.fetch_novel.call(&mut self.store, iptr)?;
 
         let bytes = self.read_bytes(rptr)?;
-        let result: Result<Novel, FensterError> =
+        let result: Result<Novel, QuelleError> =
             serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError)?;
 
         let len = bytes.len() as i32;
@@ -272,7 +272,7 @@ impl Runner {
             .call(&mut self.store, iptr)?;
 
         let bytes = self.read_bytes(rptr)?;
-        let result: Result<Option<String>, FensterError> =
+        let result: Result<Option<String>, QuelleError> =
             serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError)?;
 
         let len = bytes.len() as i32;

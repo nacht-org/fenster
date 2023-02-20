@@ -1,4 +1,4 @@
-use fenster_core::prelude::FensterError;
+use quelle_core::prelude::QuelleError;
 use wasmtime::Trap;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -6,7 +6,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("{0}")]
-    ReturnedError(#[from] FensterError),
+    ReturnedError(#[from] QuelleError),
 
     #[error("{0}")]
     Trap(#[from] Trap),

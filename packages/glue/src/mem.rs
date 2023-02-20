@@ -1,6 +1,6 @@
 use std::{mem, sync::Mutex};
 
-use fenster_core::prelude::Meta;
+use quelle_core::prelude::Meta;
 use serde::Serialize;
 
 #[no_mangle]

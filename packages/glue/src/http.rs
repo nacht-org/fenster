@@ -1,4 +1,4 @@
-use fenster_core::prelude::*;
+use quelle_core::prelude::*;
 
 use crate::prelude::{FromMem, ToMem};
 

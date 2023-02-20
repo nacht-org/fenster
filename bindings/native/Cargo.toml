@@ -1,13 +1,14 @@
 [package]
-name = "quelle"
+name = "quelle_native"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
+name = "quelle"
 crate-type = ['cdylib']
 
 [dependencies]
 env_logger = "0.10.0"
-fenster_engine = { path = '../../packages/engine' }
+quelle_engine = { path = '../../packages/engine' }
 serde_json = "1.0.93"

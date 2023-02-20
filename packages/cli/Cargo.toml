@@ -1,5 +1,5 @@
 [package]
-name = "fenster_cli"
+name = "quelle_cli"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,8 +9,8 @@ edition = "2021"
 anyhow = "1.0.66"
 chrono = "0.4.23"
 clap = { version = "4.0.26", features = ["derive"] }
-fenster_core = { version = "0.1.0", path = "../core" }
-fenster_engine = { version = "0.1.0", path = "../engine" }
+quelle_core = { version = "0.1.0", path = "../core" }
+quelle_engine = { version = "0.1.0", path = "../engine" }
 log = "0.4.17"
 serde = { version = "1.0.147", features = ["derive"] }
 serde_json = "1.0.88"

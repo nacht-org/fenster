@@ -6,7 +6,7 @@ use std::{
 };
 
 use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
-use fenster_core::prelude::*;
+use quelle_core::prelude::*;
 use indoc::formatdoc;
 use itertools::Itertools;
 use log::{info, warn};
@@ -53,7 +53,7 @@ pub fn bundle_epub(
         }
     }
 
-    builder.metadata("generator", "fenster")?;
+    builder.metadata("generator", "quelle")?;
 
     for lang in &novel.langs {
         builder.metadata("language", lang)?;

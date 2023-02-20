@@ -137,7 +137,7 @@ pub fn expose(
     let expanded = quote! {
         #[no_mangle]
         pub extern "C" fn #name(#extern_params_stream) #extern_return {
-            use fenster_glue::mem::{ToMem, FromMem};
+            use quelle_glue::mem::{ToMem, FromMem};
             #extern_parse
             #extern_block
             #extern_rserial

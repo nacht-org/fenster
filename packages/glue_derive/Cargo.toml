@@ -1,5 +1,5 @@
 [package]
-name = "fenster_glue_derive"
+name = "quelle_glue_derive"
 version = "0.1.0"
 edition = "2021"
 

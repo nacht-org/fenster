@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::http::BoxedRequestError;
 
 #[derive(Serialize, Deserialize, thiserror::Error, Debug)]
-pub enum FensterError {
+pub enum QuelleError {
     #[error("{0}")]
     RequestFailed(#[from] BoxedRequestError),
 
@@ -28,8 +28,8 @@ pub enum ParseError {
     ParseIntError,
 }
 
-impl From<ParseIntError> for FensterError {
+impl From<ParseIntError> for QuelleError {
     fn from(_: ParseIntError) -> Self {
-        FensterError::ParseFailed(ParseError::ParseIntError)
+        QuelleError::ParseFailed(ParseError::ParseIntError)
     }
 }

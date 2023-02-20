@@ -1,7 +1,7 @@
 use std::{fs::File, io::BufWriter, path::Path};
 
-use fenster_bundle::Bundle;
-use fenster_core::prelude::*;
+use quelle_bundle::Bundle;
+use quelle_core::prelude::*;
 
 use crate::data::TrackingData;
 
@@ -18,5 +18,5 @@ pub fn compile_epub(
         chapter_content: data.downloaded,
     };
 
-    fenster_bundle::epub::bundle_epub(bundle, base_path, out)
+    quelle_bundle::epub::bundle_epub(bundle, base_path, out)
 }

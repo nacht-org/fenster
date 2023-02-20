@@ -4,7 +4,7 @@ mod lock;
 use std::{fs::File, io::BufReader, path::PathBuf};
 
 use clap::{Parser, Subcommand};
-use fenster_engine::Runner;
+use quelle_engine::Runner;
 use lock::Lock;
 use simplelog::{Config, LevelFilter, TermLogger};
 use url::Url;

@@ -7,7 +7,7 @@ use std::{
     path::Path,
 };
 
-use fenster_engine::Runner;
+use quelle_engine::Runner;
 
 #[no_mangle]
 pub extern "C" fn open_engine_with_path(path: *const c_char, engine_out: *mut *mut Runner) -> i32 {

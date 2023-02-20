@@ -1,11 +1,11 @@
-use fenster_engine::Runner;
+use quelle_engine::Runner;
 use log::{info, trace, LevelFilter};
 use std::{error, path::Path};
 
 fn main() -> Result<(), Box<dyn error::Error>> {
     env_logger::builder()
         .filter_level(LevelFilter::Info)
-        .filter_module("fenster_engine", LevelFilter::Trace)
+        .filter_module("quelle_engine", LevelFilter::Trace)
         .parse_default_env()
         .init();
 

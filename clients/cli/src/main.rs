@@ -17,7 +17,7 @@ use args::{CoverAction, DownloadRange};
 use clap::{Parser, Subcommand};
 use data::{GlobalTracker, NovelTracking};
 use download::DownloadOptions;
-use fenster_engine::Runner;
+use quelle_engine::Runner;
 use lock::Lock;
 use log::{info, warn};
 use simplelog::{Config, LevelFilter, TermLogger};

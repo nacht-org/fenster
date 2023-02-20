@@ -1,5 +1,5 @@
 [package]
-name = "fenster_glue"
+name = "quelle_glue"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 serde_json = "1.0.87"
-fenster_core = { path = "../core" }
-fenster_glue_derive = { path = "../glue_derive" }
+quelle_core = { path = "../core" }
+quelle_glue_derive = { path = "../glue_derive" }
 serde = "1.0.147"
 kuchiki = "0.8.1"
