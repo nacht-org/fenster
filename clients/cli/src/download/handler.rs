@@ -7,9 +7,9 @@ use std::{
 };
 
 use anyhow::bail;
-use fenster_bundle::CoverData;
-use fenster_core::prelude::{Chapter, Meta, Novel};
-use fenster_engine::Runner;
+use quelle_bundle::CoverData;
+use quelle_core::prelude::{Chapter, Meta, Novel};
+use quelle_engine::Runner;
 use log::info;
 use reqwest::{blocking::Client, header::CONTENT_TYPE};
 use url::Url;

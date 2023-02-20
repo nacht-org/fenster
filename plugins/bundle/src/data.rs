@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use fenster_core::prelude::*;
+use quelle_core::prelude::*;
 use serde::{Deserialize, Serialize};
 
 pub struct Bundle {

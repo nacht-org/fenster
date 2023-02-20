@@ -1,0 +1,13 @@
+[package]
+name = "quelle_glue"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde_json = "1.0.87"
+quelle_core = { path = "../core" }
+quelle_glue_derive = { path = "../glue_derive" }
+serde = "1.0.147"
+kuchiki = "0.8.1"

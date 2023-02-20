@@ -1,15 +1,15 @@
 #[allow(unused_imports)]
 #[macro_use]
-extern crate fenster_glue;
+extern crate quelle_glue;
 
 use chrono::NaiveDateTime;
-use fenster_core::prelude::*;
-use fenster_glue::prelude::*;
 use kuchiki::{
     iter::{Descendants, Elements, Select},
     traits::TendrilSink,
 };
 use once_cell::sync::Lazy;
+use quelle_core::prelude::*;
+use quelle_glue::prelude::*;
 
 static META: Lazy<Meta> = Lazy::new(|| Meta {
     id: String::from("en.royalroad"),
@@ -28,7 +28,7 @@ pub fn meta() -> &'static Meta {
 }
 
 #[expose]
-pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
+pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
     let response = Request::get(url.clone()).send()?;
     let doc = kuchiki::parse_html().one(response.text().unwrap());
 
@@ -73,7 +73,7 @@ pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
 }
 
 #[expose]
-pub fn fetch_chapter_content(url: String) -> Result<Option<String>, FensterError> {
+pub fn fetch_chapter_content(url: String) -> Result<Option<String>, QuelleError> {
     let response = Request::get(url).send()?;
     let doc = kuchiki::parse_html().one(response.text().unwrap());
 
@@ -86,7 +86,7 @@ pub fn fetch_chapter_content(url: String) -> Result<Option<String>, FensterError
     Ok(content)
 }
 
-fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Result<Vec<Chapter>, FensterError> {
+fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Result<Vec<Chapter>, QuelleError> {
     let mut chapters = vec![];
 
     for tr in nodes {

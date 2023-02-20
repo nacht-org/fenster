@@ -1,5 +1,5 @@
 [package]
-name = "fenster_bundle"
+name = "quelle_bundle"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 epub-builder = { version = "0.5.0", optional = true }
-fenster_core = { version = "0.1.0", path = "../../core" }
+quelle_core = { version = "0.1.0", path = "../../packages/core" }
 indoc = { version = "1.0.8", optional = true }
 itertools = "0.10.5"
 log = "0.4.17"

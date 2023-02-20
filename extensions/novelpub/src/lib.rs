@@ -1,13 +1,13 @@
 #[macro_use]
-extern crate fenster_glue;
+extern crate quelle_glue;
 
 use std::collections::HashMap;
 
 use chrono::NaiveDateTime;
-use fenster_core::prelude::*;
-use fenster_glue::prelude::*;
 use kuchiki::{traits::TendrilSink, NodeRef};
 use once_cell::sync::Lazy;
+use quelle_core::prelude::*;
+use quelle_glue::prelude::*;
 
 static META: Lazy<Meta> = Lazy::new(|| Meta {
     id: String::from("en.novelpub"),
@@ -26,7 +26,7 @@ pub fn meta() -> &'static Meta {
 }
 
 #[expose]
-pub fn fetch_novel(url: String) -> Result<Novel, FensterError> {
+pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
     let response = Request::get(url.clone()).send()?;
     let doc = kuchiki::parse_html().one(response.text().unwrap());
 
@@ -94,7 +94,7 @@ fn collect_metadata(doc: &NodeRef) -> Vec<Metadata> {
     metadata
 }
 
-fn collect_toc(url: &str) -> Result<Vec<Volume>, FensterError> {
+fn collect_toc(url: &str) -> Result<Vec<Volume>, QuelleError> {
     let mut volume = Volume::default();
 
     // parse the first page
@@ -139,7 +139,7 @@ fn collect_toc(url: &str) -> Result<Vec<Volume>, FensterError> {
     Ok(vec![volume])
 }
 
-fn extract_toc(doc: &NodeRef, volume: &mut Volume) -> Result<(), FensterError> {
+fn extract_toc(doc: &NodeRef, volume: &mut Volume) -> Result<(), QuelleError> {
     for li in doc
         .select(".chapter-list > li")
         .map_err(|_| ParseError::ElementNotFound)?
@@ -192,7 +192,7 @@ fn toc_url(current: &str, page: usize) -> String {
 }
 
 #[expose]
-pub fn fetch_chapter_content(url: String) -> Result<String, FensterError> {
+pub fn fetch_chapter_content(url: String) -> Result<String, QuelleError> {
     let response = Request::get(url).send()?;
     let doc = kuchiki::parse_html().one(response.text().unwrap());
 
