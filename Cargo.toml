@@ -1,10 +1,15 @@
 [workspace]
 members = [
-    "packages/cli", "packages/glue", "packages/glue_derive", "packages/engine", "packages/core",
-    "extensions/novelpub", "extensions/royalroad",
-    "plugins/bundle",
+    "crates/bundle",
+    "crates/cli",
+    "crates/core",
+    "crates/engine",
+    "crates/ffi",
+    "crates/glue",
+    "crates/glue_derive",
+    "extensions/novelpub",
+    "extensions/royalroad",
     "clients/cli",
-    "bindings/native",
 ]
 
 [profile.release]

@@ -1,5 +1,5 @@
 [package]
-name = "quelle_native"
+name = "quelle_ffi"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,5 +10,5 @@ crate-type = ['cdylib']
 
 [dependencies]
 env_logger = "0.10.0"
-quelle_engine = { path = '../../packages/engine' }
+quelle_engine = { path = '../engine' }
 serde_json = "1.0.93"

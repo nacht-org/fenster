@@ -96,7 +96,7 @@ fn write_string<'c, 'm>(caller: &'c mut Caller<'_, Data>, memory: &'m Memory, va
     let alloc_func = caller.get_export("alloc").unwrap().into_func().unwrap();
 
     let ptr = alloc_func
-        .typed::<i32, i32, _>(caller.as_context())
+        .typed::<i32, i32>(caller.as_context())
         .unwrap()
         .call(caller.as_context_mut(), value.len() as i32)
         .unwrap();
@@ -118,7 +118,7 @@ fn stack_push<'c, 'm>(caller: &'c mut Caller<'_, Data>, value: i32) {
         .unwrap();
 
     push_fn
-        .typed::<i32, (), _>(&caller)
+        .typed::<i32, ()>(&caller)
         .unwrap()
         .call(caller, value)
         .unwrap();
@@ -128,7 +128,7 @@ fn stack_pop<'c, 'm>(caller: &'c mut Caller<'_, Data>) -> i32 {
     let pop_fn = caller.get_export("stack_pop").unwrap().into_func().unwrap();
 
     let value = pop_fn
-        .typed::<(), i32, _>(&caller)
+        .typed::<(), i32>(&caller)
         .unwrap()
         .call(caller, ())
         .unwrap();
@@ -220,7 +220,7 @@ impl Runner {
             .instance
             .get_func(&mut self.store, "main")
             .ok_or(anyhow::format_err!("failed to find `main` func export"))?
-            .typed::<(), (), _>(&self.store)?;
+            .typed::<(), ()>(&self.store)?;
 
         main_fn.call(&mut self.store, ())?;
         Ok(())
