@@ -1,46 +1,10 @@
+mod meta;
 use std::collections::HashMap;
 
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use url::Url;
 
-use crate::error::ParseError;
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Meta {
-    pub id: String,
-    pub name: String,
-    pub langs: Vec<String>,
-    pub version: String,
-    pub base_urls: Vec<String>,
-    pub rds: Vec<ReadingDirection>,
-    pub attrs: Vec<Attribute>,
-}
-
-impl Meta {
-    pub fn convert_into_absolute_url(
-        &self,
-        mut url: String,
-        current: Option<&str>,
-    ) -> Result<String, ParseError> {
-        if url.starts_with("https://") || url.starts_with("http://") {
-            return Ok(url);
-        } else if url.starts_with("//") {
-            let base_url = Url::parse(current.unwrap_or(&self.base_urls[0]))
-                .map_err(|_| ParseError::FailedURLParse)?;
-            url.insert_str(0, base_url.scheme());
-        } else if url.starts_with('/') {
-            let base_url = &self.base_urls[0];
-            let base_url = base_url.strip_suffix('/').unwrap_or(base_url);
-            url.insert_str(0, base_url);
-        } else if let Some(current) = current {
-            let base_url = current.strip_suffix('/').unwrap_or(current);
-            url.insert_str(0, base_url);
-        }
-
-        Ok(url)
-    }
-}
+pub use meta::Meta;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum ReadingDirection {
