@@ -9,25 +9,21 @@ use once_cell::sync::Lazy;
 use quelle_core::prelude::*;
 use quelle_glue::prelude::*;
 
-static META: Lazy<Meta> = Lazy::new(|| Meta {
-    id: String::from("en.novelpub"),
-    name: String::from("NovelPub"),
-    langs: vec![String::from("en")],
-    version: String::from(env!("CARGO_PKG_VERSION")),
-    base_urls: vec![String::from("https://www.novelpub.com/")],
-    rds: vec![ReadingDirection::Ltr],
-    attrs: vec![],
-});
+define_meta! {
+    let META = {
+        id: "en.novelpub",
+        name: "NovelPub",
+        langs: ["en"],
+        base_urls: ["https://www.novelpub.com"],
+        rds: [Ltr],
+        attrs: [],
+    };
+}
 
 #[cfg(debug_assertions)]
 #[expose]
 pub fn setup() {
     set_panic_hook();
-}
-
-#[expose]
-pub fn meta() -> &'static Meta {
-    &META
 }
 
 #[expose]
