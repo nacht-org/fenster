@@ -1,9 +1,14 @@
 mod args;
 
+use proc_macro2::{TokenStream, TokenTree};
 use quote::quote;
 use syn::{
-    parenthesized, parse::Parse, parse_macro_input, punctuated::Punctuated, token::Comma, Block,
-    FnArg, Ident, Path, ReturnType, Token, TypePath,
+    parenthesized,
+    parse::{Parse, ParseStream},
+    parse_macro_input,
+    punctuated::Punctuated,
+    token::Comma,
+    Block, FnArg, Ident, Path, ReturnType, Token, TypePath,
 };
 
 use crate::args::{get_extern_params, get_extern_params_stream};
@@ -19,8 +24,25 @@ struct Expose {
     rtype: ReturnType,
 }
 
+fn skip_until_pub(input: ParseStream) -> syn::Result<()> {
+    input.step(|cursor| {
+        let mut rest = *cursor;
+        while let Some((tt, next)) = rest.token_tree() {
+            match &tt {
+                TokenTree::Ident(ident) if ident.to_string() == "pub" => {
+                    return Ok(((), rest));
+                }
+                _ => rest = next,
+            }
+        }
+        Err(cursor.error("no `pub` was found after this point"))
+    })
+}
+
 impl Parse for Expose {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        skip_until_pub(input)?;
+
         input.parse::<Token![pub]>()?;
         input.parse::<Token![fn]>()?;
         let name: Ident = input.parse()?;
@@ -47,7 +69,7 @@ impl Parse for Expose {
 
 #[proc_macro_attribute]
 pub fn expose(
-    _attr: proc_macro::TokenStream,
+    attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     let Expose {
@@ -134,7 +156,9 @@ pub fn expose(
         }
     };
 
+    let attr = TokenStream::from(attr);
     let expanded = quote! {
+        #attr
         #[no_mangle]
         pub extern "C" fn #name(#extern_params_stream) #extern_return {
             use quelle_glue::mem::{ToMem, FromMem};

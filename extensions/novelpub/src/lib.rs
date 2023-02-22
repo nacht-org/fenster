@@ -19,9 +19,14 @@ static META: Lazy<Meta> = Lazy::new(|| Meta {
     attrs: vec![],
 });
 
+#[cfg(debug_assertions)]
+#[expose]
+pub fn setup() {
+    set_panic_hook();
+}
+
 #[expose]
 pub fn meta() -> &'static Meta {
-    set_panic_hook();
     &META
 }
 
