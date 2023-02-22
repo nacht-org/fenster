@@ -17,7 +17,7 @@ pub enum Attribute {
     Fanfiction,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Novel {
     pub title: String,
     pub authors: Vec<String>,

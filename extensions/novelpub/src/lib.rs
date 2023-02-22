@@ -27,6 +27,40 @@ pub fn setup() {
 }
 
 #[expose]
+pub fn fetch_popular_novels(query: String, page: i32) -> Result<Vec<Novel>, QuelleError> {
+    let url = format!("https://www.royalroad.com/fictions/search?title={query}&page={page}");
+    let response = Request::get(url.clone()).send()?;
+    let doc = kuchiki::parse_html().one(response.text().unwrap());
+
+    let mut novels = vec![];
+    if let Ok(elements) = doc.select(".fiction-list-item") {
+        for div in elements {
+            let Some(a) = div.as_node().select_first(".fiction-title a").ok() else { continue };
+            let Some(link) = a.get_attribute("href") else { continue };
+
+            let cover = div
+                .as_node()
+                .select_first("img")
+                .get_attribute("src")
+                .map(|src| META.convert_into_absolute_url(src, Some(&url)))
+                .transpose()?;
+
+            let novel = Novel {
+                title: a.get_text(),
+                url: META.convert_into_absolute_url(link, Some(&url))?,
+                cover,
+                langs: META.langs.clone(),
+                ..Default::default()
+            };
+
+            novels.push(novel);
+        }
+    }
+
+    Ok(novels)
+}
+
+#[expose]
 pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
     let response = Request::get(url.clone()).send()?;
     let doc = kuchiki::parse_html().one(response.text().unwrap());
