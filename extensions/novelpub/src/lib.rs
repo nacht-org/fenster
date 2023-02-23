@@ -210,7 +210,7 @@ fn extract_toc(doc: &NodeRef, volume: &mut Volume) -> Result<(), QuelleError> {
 
         let chapter = Chapter {
             index,
-            title: format!("{} {}", chapter_no.trim(), chapter_title.clean_text()),
+            title: format!("{} {}", chapter_no, chapter_title),
             url: META.convert_into_absolute_url(url, None)?,
             updated_at,
         };
