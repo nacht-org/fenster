@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use quelle_core::prelude::QuelleError;
 use wasmtime::Trap;
 
@@ -14,6 +16,26 @@ pub enum Error {
     #[error("failed to deserialize returned value")]
     DeserializeError,
 
+    #[error("{0} is not supported by source extension")]
+    NotSupported(AffectedFunction),
+
     #[error("{0}")]
     Other(#[from] anyhow::Error),
+}
+
+#[derive(Debug)]
+pub enum AffectedFunction {
+    Search,
+    Popular,
+}
+
+impl Display for AffectedFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            AffectedFunction::Search => "search",
+            AffectedFunction::Popular => "popular",
+        };
+
+        write!(f, "{value}")
+    }
 }

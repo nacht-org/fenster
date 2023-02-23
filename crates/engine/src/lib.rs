@@ -293,7 +293,7 @@ impl Runner {
         page: i32,
     ) -> crate::error::Result<Vec<BasicNovel>> {
         if self.functions.query_search.is_none() {
-            return Err(QuelleError::QuerySearchNotSupported.into());
+            return Err(error::Error::NotSupported(error::AffectedFunction::Search));
         }
 
         let query_ptr = self.write_string(query)?;
@@ -311,6 +311,10 @@ impl Runner {
     }
 
     pub fn popular_url(&mut self, page: i32) -> crate::error::Result<String> {
+        if self.functions.popular_url.is_none() {
+            return Err(error::Error::NotSupported(error::AffectedFunction::Popular));
+        }
+
         let rptr = self
             .functions
             .popular_url
@@ -327,6 +331,10 @@ impl Runner {
     }
 
     pub fn popular(&mut self, page: i32) -> crate::error::Result<Vec<BasicNovel>> {
+        if self.functions.popular.is_none() {
+            return Err(error::Error::NotSupported(error::AffectedFunction::Popular));
+        }
+
         let offset = self
             .functions
             .popular
