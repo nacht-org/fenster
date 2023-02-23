@@ -161,6 +161,8 @@ struct Functions {
     fetch_novel: TypedFunc<i32, i32>,
     fetch_chapter_content: TypedFunc<i32, i32>,
     query_search: Option<TypedFunc<(i32, i32), i32>>,
+    popular_url: Option<TypedFunc<i32, i32>>,
+    popular: Option<TypedFunc<i32, i32>>,
 }
 
 impl Runner {
@@ -216,6 +218,8 @@ impl Runner {
             fetch_novel: get_func!("fetch_novel"),
             fetch_chapter_content: get_func!("fetch_chapter_content"),
             query_search: get_func_optional!("query_search"),
+            popular_url: get_func_optional!("popular_url"),
+            popular: get_func_optional!("popular"),
         };
 
         Ok(Self {
@@ -313,6 +317,43 @@ impl Runner {
             .query_search
             .unwrap()
             .call(&mut self.store, (query_ptr, page))?;
+
+        let bytes = self.read_bytes(rptr)?;
+        let result: Result<Vec<BasicNovel>, QuelleError> =
+            serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError)?;
+
+        let len = bytes.len() as i32;
+        self.dealloc_memory(rptr, len)?;
+
+        result.map_err(|e| e.into())
+    }
+
+    pub fn popular_supported(&self) -> bool {
+        self.functions.popular.is_some()
+    }
+
+    pub fn popular_url(&mut self, page: i32) -> crate::error::Result<String> {
+        let rptr = self
+            .functions
+            .popular_url
+            .unwrap()
+            .call(&mut self.store, page)?;
+
+        let bytes = self.read_bytes(rptr)?;
+        let string = String::from_utf8_lossy(bytes).to_string();
+
+        let len = bytes.len() as i32;
+        self.dealloc_memory(rptr, len)?;
+
+        Ok(string)
+    }
+
+    pub fn popular(&mut self, page: i32) -> crate::error::Result<Vec<BasicNovel>> {
+        let rptr = self
+            .functions
+            .popular
+            .unwrap()
+            .call(&mut self.store, page)?;
 
         let bytes = self.read_bytes(rptr)?;
         let result: Result<Vec<BasicNovel>, QuelleError> =

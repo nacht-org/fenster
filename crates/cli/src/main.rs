@@ -46,6 +46,10 @@ enum Commands {
         /// Page used in search and popular
         #[arg(short, long, default_value = "1")]
         page: i32,
+
+        /// Fetch and print popular novels
+        #[arg(short, long)]
+        popular: bool,
     },
 
     /// Build the extensions
@@ -105,6 +109,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             content,
             query,
             page,
+            popular,
         } => {
             let mut runner = Runner::new(&path)?;
             runner.setup()?;
@@ -132,6 +137,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 } else {
                     println!("query search not supported");
+                }
+            }
+
+            if popular {
+                if runner.popular_supported() {
+                    let url = runner.popular_url(page)?;
+                    println!("{url}");
+
+                    let result = runner.popular(page)?;
+                    for item in result {
+                        println!("{item:?}");
+                    }
+                } else {
+                    println!("popular not supported");
                 }
             }
         }
