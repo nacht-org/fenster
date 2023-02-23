@@ -161,7 +161,7 @@ pub fn expose(
         #attr
         #[no_mangle]
         pub extern "C" fn #name(#extern_params_stream) #extern_return {
-            use quelle_glue::mem::{ToWasmAbi, FromWasmAbi};
+            use quelle_glue::abi::{ToWasmAbi, FromWasmAbi};
             #extern_parse
             #extern_block
             #extern_rserial

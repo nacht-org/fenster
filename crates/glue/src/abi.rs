@@ -111,12 +111,12 @@ macro_rules! impl_from_abi_for_serde {
 #[macro_export]
 macro_rules! impl_to_abi_for_serde {
     ($name:ty) => {
-        impl crate::mem::ToWasmAbi for $name {
+        impl crate::abi::ToWasmAbi for $name {
             type Type = *mut u8;
 
             fn to_wasm_abi(self) -> Self::Type {
                 let mut string = serde_json::to_string(&self).unwrap();
-                crate::mem::stack_push(string.len() as i32);
+                crate::abi::stack_push(string.len() as i32);
 
                 let ptr = string.as_mut_ptr();
                 mem::forget(string);
@@ -136,7 +136,7 @@ where
 
     fn to_wasm_abi(self) -> Self::Type {
         let mut string = serde_json::to_string(&self).unwrap();
-        crate::mem::stack_push(string.len() as i32);
+        crate::abi::stack_push(string.len() as i32);
 
         let ptr = string.as_mut_ptr();
         mem::forget(string);
