@@ -42,19 +42,19 @@ pub extern "C" fn stack_pop() -> i32 {
     value
 }
 
-pub trait ToMem {
+pub trait ToWasmAbi {
     type Type;
-    fn to_mem(self) -> Self::Type;
+    fn to_wasm_abi(self) -> Self::Type;
 }
 
-pub trait FromMem {
+pub trait FromWasmAbi {
     type Type;
-    fn from_mem(value: Self::Type) -> Self;
+    fn from_wasm_abi(value: Self::Type) -> Self;
 }
 
-impl ToMem for String {
+impl ToWasmAbi for String {
     type Type = *mut u8;
-    fn to_mem(self) -> Self::Type {
+    fn to_wasm_abi(self) -> Self::Type {
         let mut bytes = self.into_bytes();
         bytes.shrink_to_fit();
 
@@ -67,9 +67,9 @@ impl ToMem for String {
     }
 }
 
-impl FromMem for String {
+impl FromWasmAbi for String {
     type Type = *mut u8;
-    fn from_mem(value: Self::Type) -> Self {
+    fn from_wasm_abi(value: Self::Type) -> Self {
         let len = stack_pop() as usize;
 
         let bytes = unsafe { Vec::from_raw_parts(value, len, len) };
@@ -77,29 +77,29 @@ impl FromMem for String {
     }
 }
 
-impl ToMem for &str {
+impl ToWasmAbi for &str {
     type Type = *const u8;
-    fn to_mem(self) -> Self::Type {
+    fn to_wasm_abi(self) -> Self::Type {
         stack_push(self.len() as i32);
         self.as_ptr()
     }
 }
 
 #[macro_export]
-macro_rules! impl_mem_for_serde {
+macro_rules! impl_wasm_abi_for_serde {
     ($name:ty) => {
-        impl_from_mem_for_serde!($name)
-        impl_to_mem_for_serde!($name)
+        impl_from_abi_for_serde!($name)
+        impl_to_abi_for_serde!($name)
     };
 }
 
 #[macro_export]
-macro_rules! impl_from_mem_for_serde {
+macro_rules! impl_from_abi_for_serde {
     ($name:ty) => {
         impl crate::mem::FromMem for $name {
             type Type = *mut u8;
 
-            fn from_mem(value: Self::Type) -> Self {
+            fn from_wasm_abi(value: Self::Type) -> Self {
                 let len = crate::mem::stack_pop() as usize;
                 let bytes = unsafe { Vec::from_raw_parts(value, len, len) };
                 serde_json::from_bytes(bytes).unwrap()
@@ -109,12 +109,12 @@ macro_rules! impl_from_mem_for_serde {
 }
 
 #[macro_export]
-macro_rules! impl_to_mem_for_serde {
+macro_rules! impl_to_abi_for_serde {
     ($name:ty) => {
-        impl crate::mem::ToMem for $name {
+        impl crate::mem::ToWasmAbi for $name {
             type Type = *mut u8;
 
-            fn to_mem(self) -> Self::Type {
+            fn to_wasm_abi(self) -> Self::Type {
                 let mut string = serde_json::to_string(&self).unwrap();
                 crate::mem::stack_push(string.len() as i32);
 
@@ -126,15 +126,15 @@ macro_rules! impl_to_mem_for_serde {
     };
 }
 
-impl_to_mem_for_serde!(&Meta);
+impl_to_abi_for_serde!(&Meta);
 
-impl<T, E> ToMem for Result<T, E>
+impl<T, E> ToWasmAbi for Result<T, E>
 where
     Self: Serialize,
 {
     type Type = *mut u8;
 
-    fn to_mem(self) -> Self::Type {
+    fn to_wasm_abi(self) -> Self::Type {
         let mut string = serde_json::to_string(&self).unwrap();
         crate::mem::stack_push(string.len() as i32);
 

@@ -1,6 +1,6 @@
 use quelle_core::prelude::*;
 
-use crate::prelude::{FromMem, ToMem};
+use crate::prelude::{FromWasmAbi, ToWasmAbi};
 
 extern "C" {
     fn ext_send_request(ptr: *mut u8) -> *mut u8;
@@ -14,8 +14,8 @@ pub fn send_request(request: Request) -> Result<Response, BoxedRequestError> {
     })?;
 
     let resp = unsafe {
-        let ptr = ext_send_request(req.to_mem());
-        let resp = String::from_mem(ptr);
+        let ptr = ext_send_request(req.to_wasm_abi());
+        let resp = String::from_wasm_abi(ptr);
 
         println!("{resp}");
 

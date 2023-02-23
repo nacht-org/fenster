@@ -109,7 +109,7 @@ pub fn expose(
                         },
                         _ => {
                             quote! {
-                                let #pat: #ty = #ty::from_mem(#pat);
+                                let #pat: #ty = #ty::from_wasm_abi(#pat);
                             }
                         }
                     }
@@ -151,7 +151,7 @@ pub fn expose(
                         .collect::<Punctuated<_, Comma>>()
                 });
 
-                quote!( __inner_fn(#args).to_mem() )
+                quote!( __inner_fn(#args).to_wasm_abi() )
             }
         }
     };
@@ -161,7 +161,7 @@ pub fn expose(
         #attr
         #[no_mangle]
         pub extern "C" fn #name(#extern_params_stream) #extern_return {
-            use quelle_glue::mem::{ToMem, FromMem};
+            use quelle_glue::mem::{ToWasmAbi, FromWasmAbi};
             #extern_parse
             #extern_block
             #extern_rserial
