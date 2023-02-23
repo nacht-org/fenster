@@ -26,10 +26,10 @@ struct Package {
     name: String,
 }
 
-pub fn build(extension: Option<PathBuf>, out: PathBuf) -> anyhow::Result<()> {
+pub fn build(extension: Option<PathBuf>, out: PathBuf, release: bool) -> anyhow::Result<()> {
     match extension {
         Some(path) => {
-            build_extension(&path.as_os_str().to_string_lossy(), &out)?;
+            build_extension(&path.as_os_str().to_string_lossy(), &out, release)?;
         }
         None => {
             let members = {
@@ -43,7 +43,7 @@ pub fn build(extension: Option<PathBuf>, out: PathBuf) -> anyhow::Result<()> {
             let extensions = members.iter().filter(|v| v.starts_with("extensions/"));
 
             for extension in extensions {
-                build_extension(extension, &out)?
+                build_extension(extension, &out, release)?
             }
         }
     }
@@ -51,7 +51,7 @@ pub fn build(extension: Option<PathBuf>, out: PathBuf) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn build_extension(path: &str, out: &Path) -> anyhow::Result<()> {
+fn build_extension(path: &str, out: &Path, release: bool) -> anyhow::Result<()> {
     let package_name = {
         let path = Path::new(path).join("Cargo.toml");
         let content = fs::read_to_string(path)?;
@@ -59,15 +59,20 @@ fn build_extension(path: &str, out: &Path) -> anyhow::Result<()> {
         cargo.package.name
     };
 
+    let mut args = vec![
+        "build",
+        "-p",
+        &package_name,
+        "--target",
+        "wasm32-unknown-unknown",
+    ];
+
+    if release {
+        args.push("--release");
+    }
+
     let mut command = Command::new("cargo")
-        .args([
-            "build",
-            "-p",
-            &package_name,
-            "--release",
-            "--target",
-            "wasm32-unknown-unknown",
-        ])
+        .args(args)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
@@ -75,7 +80,8 @@ fn build_extension(path: &str, out: &Path) -> anyhow::Result<()> {
 
     command.wait()?;
 
-    let path = format!("target/wasm32-unknown-unknown/release/{package_name}.wasm");
+    let mode = if release { "release" } else { "debug" };
+    let path = format!("target/wasm32-unknown-unknown/{mode}/{package_name}.wasm");
     let to = out.join(format!("{package_name}.wasm"));
     fs::rename(&path, &to)
         .with_context(|| format!("failed to move {} to {}", path, to.display()))?;

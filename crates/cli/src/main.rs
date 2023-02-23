@@ -49,6 +49,10 @@ enum Commands {
         /// The output directory for the built extensions
         #[arg(short, long, default_value = "extensions")]
         out: PathBuf,
+
+        /// Build the extension(s) with release profile
+        #[arg(short, long)]
+        release: bool,
     },
 
     Lock {
@@ -125,8 +129,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 None => println!("No source matching '{url}' found"),
             }
         }
-        Commands::Build { extension, out } => {
-            build::build(extension, out)?;
+        Commands::Build {
+            extension,
+            out,
+            release,
+        } => {
+            build::build(extension, out, release)?;
         }
         Commands::Lock { dir } => {
             lock::lock(dir)?;
