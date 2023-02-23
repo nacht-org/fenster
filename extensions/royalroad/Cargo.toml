@@ -13,8 +13,4 @@ quelle_glue = { path = "../../crates/glue" }
 kuchiki = "0.8.1"
 serde_json = "1.0.87"
 once_cell = "1.17.0"
-
-[dependencies.chrono]
-version = "0.4.22"
-default-features = false
-features = ["clock", "iana-time-zone", "oldtime", "std", "time", "serde"]
+chrono = { workspace = true }

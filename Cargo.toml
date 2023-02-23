@@ -12,6 +12,11 @@ members = [
     "clients/cli",
 ]
 
+[workspace.dependencies.chrono]
+version = "0.4.22"
+default-features = false
+features = ["clock", "iana-time-zone", "oldtime", "std", "time", "serde"]
+
 [profile.release]
 opt-level = "z"
 lto = true
