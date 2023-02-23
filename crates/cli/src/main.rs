@@ -4,8 +4,8 @@ mod lock;
 use std::{fs::File, io::BufReader, path::PathBuf};
 
 use clap::{Parser, Subcommand};
-use quelle_engine::Runner;
 use lock::Lock;
+use quelle_engine::Runner;
 use simplelog::{Config, LevelFilter, TermLogger};
 use url::Url;
 
@@ -93,6 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             content,
         } => {
             let mut runner = Runner::new(&path)?;
+            runner.setup()?;
 
             if meta {
                 let meta = runner.meta()?;
