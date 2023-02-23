@@ -38,6 +38,14 @@ enum Commands {
         /// Fetch and print the chapter content
         #[arg(short, long)]
         content: Option<Url>,
+
+        /// A text query to use to search
+        #[arg(short, long)]
+        query: Option<String>,
+
+        /// Page used in search and popular
+        #[arg(short, long, default_value = "1")]
+        page: i32,
     },
 
     /// Build the extensions
@@ -95,6 +103,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             meta,
             novel,
             content,
+            query,
+            page,
         } => {
             let mut runner = Runner::new(&path)?;
             runner.setup()?;
@@ -112,6 +122,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(url) = content {
                 let content = runner.fetch_chapter_content(url.as_str())?;
                 println!("{content:#?}");
+            }
+
+            if let Some(query) = query {
+                if runner.query_search_supported() {
+                    let result = runner.query_search(&query, page)?;
+                    for item in result {
+                        println!("{item:?}");
+                    }
+                } else {
+                    println!("query search not supported");
+                }
             }
         }
         Commands::Detect { url, lock } => {

@@ -11,6 +11,9 @@ pub enum QuelleError {
 
     #[error("{0}")]
     ParseFailed(#[from] ParseError),
+
+    #[error("query search is not supported by source extension")]
+    QuerySearchNotSupported,
 }
 
 #[derive(Serialize, Deserialize, thiserror::Error, Debug)]

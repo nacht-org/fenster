@@ -1,10 +1,12 @@
 mod meta;
+mod novel;
 use std::collections::HashMap;
 
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
 pub use meta::Meta;
+pub use novel::{BasicNovel, Novel};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum ReadingDirection {
@@ -15,19 +17,6 @@ pub enum ReadingDirection {
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Attribute {
     Fanfiction,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct Novel {
-    pub title: String,
-    pub authors: Vec<String>,
-    pub url: String,
-    pub cover: Option<String>,
-    pub description: Vec<String>,
-    pub volumes: Vec<Volume>,
-    pub metadata: Vec<Metadata>,
-    pub status: NovelStatus,
-    pub langs: Vec<String>,
 }
 
 /// https://www.dublincore.org/specifications/dublin-core/dces/

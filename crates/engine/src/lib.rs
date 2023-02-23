@@ -160,6 +160,7 @@ struct Functions {
     meta: TypedFunc<(), i32>,
     fetch_novel: TypedFunc<i32, i32>,
     fetch_chapter_content: TypedFunc<i32, i32>,
+    query_search: Option<TypedFunc<(i32, i32), i32>>,
 }
 
 impl Runner {
@@ -214,6 +215,7 @@ impl Runner {
             meta: get_func!("meta"),
             fetch_novel: get_func!("fetch_novel"),
             fetch_chapter_content: get_func!("fetch_chapter_content"),
+            query_search: get_func_optional!("query_search"),
         };
 
         Ok(Self {
@@ -284,6 +286,36 @@ impl Runner {
 
         let bytes = self.read_bytes(rptr)?;
         let result: Result<Option<String>, QuelleError> =
+            serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError)?;
+
+        let len = bytes.len() as i32;
+        self.dealloc_memory(rptr, len)?;
+
+        result.map_err(|e| e.into())
+    }
+
+    pub fn query_search_supported(&self) -> bool {
+        self.functions.query_search.is_some()
+    }
+
+    pub fn query_search(
+        &mut self,
+        query: &str,
+        page: i32,
+    ) -> crate::error::Result<Vec<BasicNovel>> {
+        if self.functions.query_search.is_none() {
+            return Err(QuelleError::QuerySearchNotSupported.into());
+        }
+
+        let query_ptr = self.write_string(query)?;
+        let rptr = self
+            .functions
+            .query_search
+            .unwrap()
+            .call(&mut self.store, (query_ptr, page))?;
+
+        let bytes = self.read_bytes(rptr)?;
+        let result: Result<Vec<BasicNovel>, QuelleError> =
             serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError)?;
 
         let len = bytes.len() as i32;

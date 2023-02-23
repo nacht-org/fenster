@@ -129,3 +129,35 @@ fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Result<Vec<Chapte
 
     Ok(chapters)
 }
+
+#[expose]
+pub fn query_search(query: String, page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
+    let url = format!("https://www.royalroad.com/fictions/search?title={query}&page={page}");
+    let response = Request::get(url.clone()).send()?;
+    let doc = kuchiki::parse_html().one(response.text().unwrap());
+
+    let mut novels = vec![];
+    if let Ok(elements) = doc.select(".fiction-list-item") {
+        for div in elements {
+            let Some(a) = div.as_node().select_first(".fiction-title a").ok() else { continue };
+            let Some(link) = a.get_attribute("href") else { continue };
+
+            let cover = div
+                .as_node()
+                .select_first("img")
+                .get_attribute("src")
+                .map(|src| META.convert_into_absolute_url(src, Some(&url)))
+                .transpose()?;
+
+            let novel = BasicNovel {
+                title: a.get_text(),
+                url: META.convert_into_absolute_url(link, Some(&url))?,
+                cover,
+            };
+
+            novels.push(novel);
+        }
+    }
+
+    Ok(novels)
+}
