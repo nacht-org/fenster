@@ -269,33 +269,18 @@ impl Runner {
 
     pub fn fetch_novel(&mut self, url: &str) -> crate::error::Result<Novel> {
         let iptr = self.write_string(url)?;
-        let rptr = self.functions.fetch_novel.call(&mut self.store, iptr)?;
-
-        let bytes = self.read_bytes(rptr)?;
-        let result: Result<Novel, QuelleError> =
-            serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError)?;
-
-        let len = bytes.len() as i32;
-        self.dealloc_memory(rptr, len)?;
-
-        result.map_err(|e| e.into())
+        let offset = self.functions.fetch_novel.call(&mut self.store, iptr)?;
+        self.claim_result::<Novel, QuelleError>(offset)
     }
 
     pub fn fetch_chapter_content(&mut self, url: &str) -> crate::error::Result<Option<String>> {
         let iptr = self.write_string(url)?;
-        let rptr = self
+        let offset = self
             .functions
             .fetch_chapter_content
             .call(&mut self.store, iptr)?;
 
-        let bytes = self.read_bytes(rptr)?;
-        let result: Result<Option<String>, QuelleError> =
-            serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError)?;
-
-        let len = bytes.len() as i32;
-        self.dealloc_memory(rptr, len)?;
-
-        result.map_err(|e| e.into())
+        self.claim_result::<Option<String>, QuelleError>(offset)
     }
 
     pub fn query_search_supported(&self) -> bool {
@@ -312,20 +297,13 @@ impl Runner {
         }
 
         let query_ptr = self.write_string(query)?;
-        let rptr = self
+        let offset = self
             .functions
             .query_search
             .unwrap()
             .call(&mut self.store, (query_ptr, page))?;
 
-        let bytes = self.read_bytes(rptr)?;
-        let result: Result<Vec<BasicNovel>, QuelleError> =
-            serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError)?;
-
-        let len = bytes.len() as i32;
-        self.dealloc_memory(rptr, len)?;
-
-        result.map_err(|e| e.into())
+        self.claim_result::<Vec<BasicNovel>, QuelleError>(offset)
     }
 
     pub fn popular_supported(&self) -> bool {
@@ -349,20 +327,13 @@ impl Runner {
     }
 
     pub fn popular(&mut self, page: i32) -> crate::error::Result<Vec<BasicNovel>> {
-        let rptr = self
+        let offset = self
             .functions
             .popular
             .unwrap()
             .call(&mut self.store, page)?;
 
-        let bytes = self.read_bytes(rptr)?;
-        let result: Result<Vec<BasicNovel>, QuelleError> =
-            serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError)?;
-
-        let len = bytes.len() as i32;
-        self.dealloc_memory(rptr, len)?;
-
-        result.map_err(|e| e.into())
+        self.claim_result::<Vec<BasicNovel>, QuelleError>(offset)
     }
 
     fn read_bytes(&mut self, offset: i32) -> crate::error::Result<&[u8]> {
@@ -375,6 +346,21 @@ impl Runner {
         };
 
         Ok(value)
+    }
+
+    fn claim_result<T, E>(&mut self, offset: i32) -> crate::error::Result<T>
+    where
+        Result<T, E>: serde::de::DeserializeOwned,
+        crate::error::Error: From<E>,
+    {
+        let bytes = self.read_bytes(offset)?;
+        let result: Result<T, E> =
+            serde_json::from_reader(bytes).map_err(|_| Error::DeserializeError)?;
+
+        let len = bytes.len() as i32;
+        self.dealloc_memory(offset, len)?;
+
+        result.map_err(|e| e.into())
     }
 
     fn write_string(&mut self, value: &str) -> crate::error::Result<i32> {
