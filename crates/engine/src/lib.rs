@@ -156,6 +156,7 @@ struct Functions {
     stack_pop: TypedFunc<(), i32>,
 
     // User
+    setup: Option<TypedFunc<(), ()>>,
     meta: TypedFunc<(), i32>,
     fetch_novel: TypedFunc<i32, i32>,
     fetch_chapter_content: TypedFunc<i32, i32>,
@@ -195,11 +196,21 @@ impl Runner {
             };
         }
 
+        macro_rules! get_func_optional {
+            ($name:literal) => {
+                instance
+                    .get_func(&mut store, $name)
+                    .map(|f| f.typed(&store))
+                    .transpose()?
+            };
+        }
+
         let functions = Functions {
             alloc: get_func!("alloc"),
             dealloc: get_func!("dealloc"),
             stack_push: get_func!("stack_push"),
             stack_pop: get_func!("stack_pop"),
+            setup: get_func_optional!("setup"),
             meta: get_func!("meta"),
             fetch_novel: get_func!("fetch_novel"),
             fetch_chapter_content: get_func!("fetch_chapter_content"),
@@ -215,14 +226,14 @@ impl Runner {
         })
     }
 
-    pub fn main(&mut self) -> crate::error::Result<()> {
-        let main_fn = self
-            .instance
-            .get_func(&mut self.store, "main")
-            .ok_or(anyhow::format_err!("failed to find `main` func export"))?
-            .typed::<(), ()>(&self.store)?;
+    /// Call the wasm setup function if the function exists
+    ///
+    /// This is usually used during debugging to setup panic hooks
+    pub fn setup(&mut self) -> crate::error::Result<()> {
+        if let Some(func) = self.functions.setup.as_ref() {
+            func.call(&mut self.store, ())?;
+        }
 
-        main_fn.call(&mut self.store, ())?;
         Ok(())
     }
 

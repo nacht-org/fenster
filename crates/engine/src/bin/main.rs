@@ -1,5 +1,5 @@
-use quelle_engine::Runner;
 use log::{info, trace, LevelFilter};
+use quelle_engine::Runner;
 use std::{error, path::Path};
 
 fn main() -> Result<(), Box<dyn error::Error>> {
@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         "target/wasm32-unknown-unknown/debug/extension_royalroad.wasm",
     ))?;
 
-    // runner.main()?;
+    runner.setup()?;
 
     info!("Calling exposed wasm 'meta' function");
     let meta = runner.meta()?;
