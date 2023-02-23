@@ -7,10 +7,10 @@ use std::{
 };
 
 use anyhow::bail;
+use log::info;
 use quelle_bundle::CoverData;
 use quelle_core::prelude::{Chapter, Meta, Novel};
 use quelle_engine::Runner;
-use log::info;
 use reqwest::{blocking::Client, header::CONTENT_TYPE};
 use url::Url;
 
@@ -44,6 +44,7 @@ fn get_chapters_dir(root: &Path) -> PathBuf {
 impl DownloadHandler {
     pub fn new(url: Url, wasm_path: PathBuf, options: DownloadOptions) -> anyhow::Result<Self> {
         let mut runner = Runner::new(&wasm_path)?;
+        runner.setup()?;
 
         let novel = runner.fetch_novel(url.as_str())?;
         let meta = runner.meta()?;
