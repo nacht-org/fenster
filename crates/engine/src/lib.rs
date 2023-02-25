@@ -160,7 +160,7 @@ struct Functions {
     meta: TypedFunc<(), i32>,
     fetch_novel: TypedFunc<i32, i32>,
     fetch_chapter_content: TypedFunc<i32, i32>,
-    query_search: Option<TypedFunc<(i32, i32), i32>>,
+    text_search: Option<TypedFunc<(i32, i32), i32>>,
     popular_url: Option<TypedFunc<i32, i32>>,
     popular: Option<TypedFunc<i32, i32>>,
 }
@@ -217,7 +217,7 @@ impl Runner {
             meta: get_func!("meta"),
             fetch_novel: get_func!("fetch_novel"),
             fetch_chapter_content: get_func!("fetch_chapter_content"),
-            query_search: get_func_optional!("query_search"),
+            text_search: get_func_optional!("query_search"),
             popular_url: get_func_optional!("popular_url"),
             popular: get_func_optional!("popular"),
         };
@@ -283,23 +283,19 @@ impl Runner {
         self.claim_result::<Option<String>, QuelleError>(offset)
     }
 
-    pub fn query_search_supported(&self) -> bool {
-        self.functions.query_search.is_some()
+    pub fn text_search_supported(&self) -> bool {
+        self.functions.text_search.is_some()
     }
 
-    pub fn query_search(
-        &mut self,
-        query: &str,
-        page: i32,
-    ) -> crate::error::Result<Vec<BasicNovel>> {
-        if self.functions.query_search.is_none() {
+    pub fn text_search(&mut self, query: &str, page: i32) -> crate::error::Result<Vec<BasicNovel>> {
+        if self.functions.text_search.is_none() {
             return Err(error::Error::NotSupported(error::AffectedFunction::Search));
         }
 
         let query_ptr = self.write_string(query)?;
         let offset = self
             .functions
-            .query_search
+            .text_search
             .unwrap()
             .call(&mut self.store, (query_ptr, page))?;
 

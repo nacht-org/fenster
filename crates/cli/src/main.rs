@@ -41,7 +41,7 @@ enum Commands {
 
         /// A text query to use to search
         #[arg(short, long)]
-        query: Option<String>,
+        search: Option<String>,
 
         /// Page used in search and popular
         #[arg(short, long, default_value = "1")]
@@ -107,7 +107,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             meta,
             novel,
             content,
-            query,
+            search: query,
             page,
             popular,
         } => {
@@ -130,8 +130,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             if let Some(query) = query {
-                if runner.query_search_supported() {
-                    let result = runner.query_search(&query, page)?;
+                if runner.text_search_supported() {
+                    let result = runner.text_search(&query, page)?;
                     for item in result {
                         println!("{item:?}");
                     }

@@ -165,7 +165,7 @@ pub fn popular(page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
 }
 
 #[expose]
-pub fn query_search(query: String, page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
+pub fn text_search(query: String, page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
     let url = format!("https://www.royalroad.com/fictions/search?title={query}&page={page}");
     let response = Request::get(url.clone()).send()?;
     let doc = kuchiki::parse_html().one(response.text().unwrap());
