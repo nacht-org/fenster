@@ -1,7 +1,6 @@
 use std::mem;
 
 use quelle_core::prelude::Meta;
-use serde::Serialize;
 
 use super::{stack_pop, stack_push};
 
@@ -59,7 +58,7 @@ macro_rules! impl_wasm_abi_for_serde {
 #[macro_export]
 macro_rules! impl_from_abi_for_serde {
     ($name:ty) => {
-        impl crate::mem::FromMem for $name {
+        impl crate::abi::ToWasmAbi for $name {
             type Type = *mut u8;
 
             fn from_wasm_abi(value: Self::Type) -> Self {
@@ -90,19 +89,3 @@ macro_rules! impl_to_abi_for_serde {
 }
 
 impl_to_abi_for_serde!(&Meta);
-
-impl<T, E> ToWasmAbi for Result<T, E>
-where
-    Self: Serialize,
-{
-    type Type = *mut u8;
-
-    fn to_wasm_abi(self) -> Self::Type {
-        let mut string = serde_json::to_string(&self).unwrap();
-        crate::abi::stack_push(string.len() as i32);
-
-        let ptr = string.as_mut_ptr();
-        mem::forget(string);
-        ptr
-    }
-}

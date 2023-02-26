@@ -109,7 +109,7 @@ pub fn expose(
                         },
                         _ => {
                             quote! {
-                                let #pat: #ty = #ty::from_wasm_abi(#pat);
+                                let #pat: #ty = <#ty as FromWasmAbi>::from_wasm_abi(#pat);
                             }
                         }
                     }
@@ -126,7 +126,7 @@ pub fn expose(
     let extern_return = {
         match &rtype {
             ReturnType::Default => quote!(),
-            ReturnType::Type(_, _) => quote!( -> *mut u8 ),
+            ReturnType::Type(_, ty) => quote!( -> <#ty as ToWasmAbi>::Type ),
         }
     };
 
@@ -151,7 +151,7 @@ pub fn expose(
                         .collect::<Punctuated<_, Comma>>()
                 });
 
-                quote!( __inner_fn(#args).to_wasm_abi() )
+                quote!( ToWasmAbi::to_wasm_abi(__inner_fn(#args)) )
             }
         }
     };

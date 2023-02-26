@@ -19,6 +19,9 @@ pub enum Error {
     #[error("{0} is not supported by source extension")]
     NotSupported(AffectedFunction),
 
+    #[error("failed to parse the result attemting to return")]
+    FailedResultAttempt,
+
     #[error("{0}")]
     Other(#[from] anyhow::Error),
 }
