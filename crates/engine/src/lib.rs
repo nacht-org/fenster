@@ -4,6 +4,7 @@ use error::Error;
 use log::{debug, info, trace};
 use quelle_core::prelude::*;
 use reqwest::blocking::Client;
+use serde::de::DeserializeOwned;
 use std::{path::Path, slice, str::FromStr};
 use wasmtime::*;
 
@@ -277,14 +278,14 @@ impl Runner {
         self.parse_result::<Novel, QuelleError>(offset)
     }
 
-    pub fn fetch_chapter_content(&mut self, url: &str) -> crate::error::Result<Option<String>> {
+    pub fn fetch_chapter_content(&mut self, url: &str) -> crate::error::Result<String> {
         let iptr = self.write_string(url)?;
         let offset = self
             .functions
             .fetch_chapter_content
             .call(&mut self.store, iptr)?;
 
-        self.parse_result_with_none::<String, QuelleError>(offset)
+        self.parse_string_result::<QuelleError>(offset)
     }
 
     pub fn text_search_supported(&self) -> bool {
@@ -365,20 +366,20 @@ impl Runner {
         E: serde::de::DeserializeOwned,
         crate::error::Error: From<E>,
     {
-        match self.parse_result_with_none(signed_len) {
+        match self.parse_option_result(signed_len) {
             Ok(None) => Err(error::Error::FailedResultAttempt),
             Ok(Some(v)) => Ok(v),
             Err(e) => Err(e),
         }
     }
 
-    fn parse_result_with_none<T, E>(&mut self, signed_len: i32) -> error::Result<Option<T>>
+    fn parse_option_result<T, E>(&mut self, signed_len: i32) -> error::Result<Option<T>>
     where
         T: serde::de::DeserializeOwned,
         E: serde::de::DeserializeOwned,
         crate::error::Error: From<E>,
     {
-        info!("received a result with length: {signed_len}");
+        info!("parsing Result<T, E> from a result with length: {signed_len}");
 
         if signed_len > 0 {
             self.with_result_bytes(signed_len as usize, |bytes| {
@@ -387,18 +388,44 @@ impl Runner {
                     .map_err(|_| Error::DeserializeError.into())
             })
         } else if signed_len < 0 {
-            self.with_result_bytes((-signed_len) as usize, |bytes| {
-                let err: Result<E, error::Error> = serde_json::from_reader::<_, E>(bytes)
-                    .map_err(|_| Error::DeserializeError.into());
-
-                match err {
-                    Ok(v) => Err(v.into()),
-                    Err(e) => Err(e),
-                }
-            })
+            self.parse_result_error(signed_len)
         } else {
             Ok(None)
         }
+    }
+
+    fn parse_string_result<E>(&mut self, signed_len: i32) -> error::Result<String>
+    where
+        E: DeserializeOwned,
+        error::Error: From<E>,
+    {
+        info!("parsing Result<String, E> from a result with length: {signed_len}");
+
+        if signed_len > 0 {
+            self.with_result_bytes(signed_len as usize, |bytes| {
+                String::from_utf8(bytes.to_vec()).map_err(|e| e.into())
+            })
+        } else if signed_len < 0 {
+            self.parse_result_error(signed_len)
+        } else {
+            Err(error::Error::FailedResultAttempt)
+        }
+    }
+
+    fn parse_result_error<T, E>(&mut self, signed_len: i32) -> error::Result<T>
+    where
+        E: DeserializeOwned,
+        error::Error: From<E>,
+    {
+        self.with_result_bytes((-signed_len) as usize, |bytes| {
+            let err: Result<E, error::Error> =
+                serde_json::from_reader::<_, E>(bytes).map_err(|_| Error::DeserializeError.into());
+
+            match err {
+                Ok(v) => Err(v.into()),
+                Err(e) => Err(e),
+            }
+        })
     }
 
     fn with_result_bytes<T>(

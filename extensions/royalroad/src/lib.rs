@@ -74,7 +74,7 @@ pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
 }
 
 #[expose]
-pub fn fetch_chapter_content(url: String) -> Result<Option<String>, QuelleError> {
+pub fn fetch_chapter_content(url: String) -> Result<String, QuelleError> {
     let response = Request::get(url).send()?;
     let doc = kuchiki::parse_html().one(response.text().unwrap());
 
@@ -82,7 +82,8 @@ pub fn fetch_chapter_content(url: String) -> Result<Option<String>, QuelleError>
         .select_first(".chapter-content")
         .map(|node| node.as_node().outer_html())
         .ok()
-        .transpose()?;
+        .transpose()?
+        .ok_or(QuelleError::ParseFailed(ParseError::ElementNotFound))?;
 
     Ok(content)
 }

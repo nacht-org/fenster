@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, string::FromUtf8Error};
 
 use quelle_core::prelude::QuelleError;
 use wasmtime::Trap;
@@ -21,6 +21,9 @@ pub enum Error {
 
     #[error("failed to parse the result attemting to return")]
     FailedResultAttempt,
+
+    #[error("{0}")]
+    Utf8Error(#[from] FromUtf8Error),
 
     #[error("{0}")]
     Other(#[from] anyhow::Error),
