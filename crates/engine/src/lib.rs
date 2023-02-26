@@ -274,7 +274,7 @@ impl Runner {
     pub fn fetch_novel(&mut self, url: &str) -> crate::error::Result<Novel> {
         let iptr = self.write_string(url)?;
         let offset = self.functions.fetch_novel.call(&mut self.store, iptr)?;
-        self.claim_result::<Novel, QuelleError>(offset)
+        self.parse_result::<Novel, QuelleError>(offset)
     }
 
     pub fn fetch_chapter_content(&mut self, url: &str) -> crate::error::Result<Option<String>> {
@@ -284,7 +284,7 @@ impl Runner {
             .fetch_chapter_content
             .call(&mut self.store, iptr)?;
 
-        self.claim_result::<Option<String>, QuelleError>(offset)
+        self.parse_result_with_none::<String, QuelleError>(offset)
     }
 
     pub fn text_search_supported(&self) -> bool {
@@ -303,7 +303,7 @@ impl Runner {
             .unwrap()
             .call(&mut self.store, (query_ptr, page))?;
 
-        self.claim_result::<Vec<BasicNovel>, QuelleError>(offset)
+        self.parse_result::<Vec<BasicNovel>, QuelleError>(offset)
     }
 
     pub fn popular_supported(&self) -> bool {
@@ -341,7 +341,7 @@ impl Runner {
             .unwrap()
             .call(&mut self.store, page)?;
 
-        self.claim_result::<Vec<BasicNovel>, QuelleError>(offset)
+        self.parse_result::<Vec<BasicNovel>, QuelleError>(offset)
     }
 
     fn read_bytes(&mut self, offset: i32) -> crate::error::Result<&[u8]> {
@@ -359,18 +359,35 @@ impl Runner {
         Ok(value)
     }
 
-    fn claim_result<T, E>(&mut self, signed_len: i32) -> crate::error::Result<T>
+    fn parse_result<T, E>(&mut self, signed_len: i32) -> crate::error::Result<T>
     where
         T: serde::de::DeserializeOwned,
         E: serde::de::DeserializeOwned,
         crate::error::Error: From<E>,
     {
+        match self.parse_result_with_none(signed_len) {
+            Ok(None) => Err(error::Error::FailedResultAttempt),
+            Ok(Some(v)) => Ok(v),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn parse_result_with_none<T, E>(&mut self, signed_len: i32) -> error::Result<Option<T>>
+    where
+        T: serde::de::DeserializeOwned,
+        E: serde::de::DeserializeOwned,
+        crate::error::Error: From<E>,
+    {
+        info!("received a result with length: {signed_len}");
+
         if signed_len > 0 {
-            self.with_result_bytes(signed_len, |bytes| {
-                serde_json::from_reader::<_, T>(bytes).map_err(|_| Error::DeserializeError.into())
+            self.with_result_bytes(signed_len as usize, |bytes| {
+                serde_json::from_reader::<_, T>(bytes)
+                    .map(|v| Some(v))
+                    .map_err(|_| Error::DeserializeError.into())
             })
         } else if signed_len < 0 {
-            self.with_result_bytes(signed_len, |bytes| {
+            self.with_result_bytes((-signed_len) as usize, |bytes| {
                 let err: Result<E, error::Error> = serde_json::from_reader::<_, E>(bytes)
                     .map_err(|_| Error::DeserializeError.into());
 
@@ -380,17 +397,17 @@ impl Runner {
                 }
             })
         } else {
-            Err(error::Error::FailedResultAttempt)
+            Ok(None)
         }
     }
 
     fn with_result_bytes<T>(
         &mut self,
-        signed_len: i32,
+        len: usize,
         f: impl Fn(&[u8]) -> crate::error::Result<T>,
     ) -> crate::error::Result<T> {
         let offset = self.last_result()?;
-        let bytes = self.read_bytes_with_len(offset, signed_len.abs() as usize)?;
+        let bytes = self.read_bytes_with_len(offset, len)?;
 
         let out = f(bytes);
 
