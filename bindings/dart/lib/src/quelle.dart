@@ -90,6 +90,22 @@ class Quelle {
     return content;
   }
 
+  String popularJson(int page) {
+    Pointer<Pointer<Utf8>> buffer = calloc();
+    String content;
+
+    try {
+      final result = bindings.popular(_engine.unsafe(), page, buffer);
+      if (result != 0) throw _readError();
+      content = buffer.value.toDartString();
+    } finally {
+      calloc.free(buffer.value);
+      calloc.free(buffer);
+    }
+
+    return content;
+  }
+
   QuelleException _readError() {
     Pointer<Pointer<Utf8>> buffer = calloc();
     bindings.last_error_message(buffer);

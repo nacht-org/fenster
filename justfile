@@ -3,6 +3,9 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 build-cli +FLAGS="-r":
     cargo build -p quelle_cli {{FLAGS}}
 
+build-ffi +FLAGS="-r":
+    cargo build -p quelle_ffi {{FLAGS}}
+
 build-extension-all *FLAGS: build-cli
     ./target/release/quelle_cli -vv build {{FLAGS}}
 

@@ -1,7 +1,7 @@
 import 'package:quelle/src/quelle.dart';
 
 void main(List<String> args) {
-  final quelle = Quelle("../../extensions/extension_novelpub.wasm");
+  final quelle = Quelle("../../extensions/extension_royalroad.wasm");
   final meta = quelle.meta();
   print(meta);
 
@@ -14,4 +14,7 @@ void main(List<String> args) {
   final content = quelle.fetchChapterContent(
       "https://www.novelpub.com/novel/the-villains-side-of-the-novel-1495/chapter-1");
   print(content);
+
+  final popularNovels = quelle.popularJson(1);
+  print(popularNovels);
 }

@@ -412,6 +412,20 @@ impl Runner {
         }
     }
 
+    fn parse_result_raw(&mut self, signed_len: i32) -> error::Result<Option<&[u8]>> {
+        info!("parsing Result<T, E> from a result with length: {signed_len}");
+
+        if signed_len > 0 {
+            let offset = self.last_result()?;
+            let bytes = self.read_bytes_with_len(offset, signed_len as usize)?;
+            Ok(Some(bytes))
+        } else if signed_len < 0 {
+            self.parse_result_error::<_, QuelleError>(signed_len)
+        } else {
+            Ok(None)
+        }
+    }
+
     fn parse_result_error<T, E>(&mut self, signed_len: i32) -> error::Result<T>
     where
         E: DeserializeOwned,

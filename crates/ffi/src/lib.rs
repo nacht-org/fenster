@@ -61,8 +61,8 @@ fn fetch_novel_private(
     let engine = unsafe { engine.as_mut().unwrap() };
 
     let novel = engine.fetch_novel(url)?;
-    let json = serde_json::to_string(&novel)?;
-    write_buffer(buffer, json)?;
+    let content = serde_json::to_string(&novel)?;
+    write_buffer(buffer, content)?;
 
     Ok(())
 }
@@ -90,8 +90,25 @@ fn fetch_chapter_content_private(
     Ok(())
 }
 
-fn write_buffer(buffer: *mut *mut c_char, string: String) -> Result<(), Box<dyn Error>> {
-    let cstring = CString::new(string)?;
+#[no_mangle]
+pub extern "C" fn popular(engine: *mut Runner, page: i32, buffer: *mut *mut c_char) -> i32 {
+    error::capture_error(|| popular_private(engine, page, buffer))
+}
+
+fn popular_private(
+    engine: *mut Runner,
+    page: i32,
+    buffer: *mut *mut c_char,
+) -> Result<(), Box<dyn Error>> {
+    let engine = unsafe { engine.as_mut().unwrap() };
+    let novels = engine.popular(page)?;
+    let content = serde_json::to_string(&novels)?;
+
+    write_buffer(buffer, content)
+}
+
+fn write_buffer(buffer: *mut *mut c_char, content: String) -> Result<(), Box<dyn Error>> {
+    let cstring = CString::new(content)?;
     // The caller is responsible for handling the output
     unsafe { *buffer = cstring.as_ptr() as *mut c_char };
     mem::forget(cstring);

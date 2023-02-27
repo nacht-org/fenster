@@ -26,3 +26,9 @@ typedef fetch_chapter_content_native_t = Int32 Function(
   Pointer<Utf8> url,
   Pointer<Pointer<Utf8>> buffer,
 );
+
+typedef popular_native_t = Int32 Function(
+  Pointer<Engine> engine,
+  Int32 page,
+  Pointer<Pointer<Utf8>> buffer,
+);
