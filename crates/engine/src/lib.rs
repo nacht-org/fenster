@@ -408,7 +408,7 @@ impl Runner {
         } else if signed_len < 0 {
             self.parse_result_error(signed_len)
         } else {
-            Err(error::Error::FailedResultAttempt)
+            Ok(Default::default())
         }
     }
 

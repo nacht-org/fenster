@@ -5,7 +5,7 @@ use std::{cell::RefCell, mem, ptr};
 use super::ToWasmAbi;
 
 thread_local! {
-    static LAST_RESULT: RefCell<Option<Vec<u8>>>  = RefCell::new(None);
+    static LAST_RESULT: RefCell<Option<Vec<u8>>> = RefCell::new(None);
 }
 
 fn set_last_result(mut value: Vec<u8>) {
@@ -31,85 +31,76 @@ pub extern "C" fn last_result() -> *mut u8 {
     ptr
 }
 
-fn result_to_wasm_abi<T, E>(result: Result<T, E>) -> i32
+fn store_serde<S>(value: S, force_neg: bool) -> i32
 where
-    T: Serialize,
-    E: Serialize,
+    S: Serialize,
 {
-    let self_is_err = result.is_err();
+    let serial_result = serde_json::to_vec(&value);
+    let serial_is_err = serial_result.is_err();
 
-    let json_result = match result {
-        Ok(v) => serde_json::to_vec(&v),
-        Err(e) => serde_json::to_vec(&e),
-    };
-
-    result_bytes_to_wasm_abi(json_result, self_is_err)
-}
-
-fn result_bytes_to_wasm_abi<E>(result: Result<Vec<u8>, E>, from_error: bool) -> i32
-where
-    E: ToString,
-{
-    let json_is_error = result.is_err();
-
-    let response = match result {
+    let bytes = match serial_result {
         Ok(v) => v,
-        Err(e) => e.to_string().into_bytes(),
+        Err(e) => {
+            let wrapped_err = QuelleError::WasmAbiError(e.to_string());
+            serde_json::to_vec(&wrapped_err).unwrap()
+        }
     };
 
-    let len = response.len() as i32;
-    set_last_result(response);
-
-    if from_error || json_is_error {
+    let len = store_bytes(bytes);
+    if force_neg || serial_is_err {
         -len
     } else {
         len
     }
 }
 
-macro_rules! impl_to_abi_for_result {
-    (Option<$ok:ty>, $err:ty) => {
-        impl ToWasmAbi for Result<Option<$ok>, $err> {
-            type Type = i32;
-
-            #[inline]
-            fn to_wasm_abi(self) -> Self::Type {
-                match self {
-                    Ok(None) => 0,
-                    _ => result_to_wasm_abi(self),
-                }
-            }
-        }
-    };
-    (String, $err:ty) => {
-        impl ToWasmAbi for Result<String, $err> {
-            type Type = i32;
-
-            #[inline]
-            fn to_wasm_abi(self) -> Self::Type {
-                let self_is_err = self.is_err();
-
-                let json_result = match self {
-                    Ok(v) => Ok(v.into_bytes()),
-                    Err(e) => serde_json::to_vec(&e),
-                };
-
-                result_bytes_to_wasm_abi(json_result, self_is_err)
-            }
-        }
-    };
-    ($ok:ty, $err:ty) => {
-        impl ToWasmAbi for Result<$ok, $err> {
-            type Type = i32;
-
-            fn to_wasm_abi(self) -> Self::Type {
-                result_to_wasm_abi(self)
-            }
-        }
-    };
+fn store_bytes(bytes: Vec<u8>) -> i32 {
+    let len = bytes.len() as i32;
+    set_last_result(bytes);
+    len
 }
 
-impl_to_abi_for_result!(Novel, QuelleError);
-impl_to_abi_for_result!(Vec<BasicNovel>, QuelleError);
-impl_to_abi_for_result!(Option<String>, QuelleError);
-impl_to_abi_for_result!(String, QuelleError);
+#[inline]
+fn store_error<E>(e: E) -> i32
+where
+    E: Serialize,
+{
+    store_serde(e, true)
+}
+
+impl ToWasmAbi for Result<String, QuelleError> {
+    type Type = i32;
+
+    #[inline]
+    fn to_wasm_abi(self) -> Self::Type {
+        match self {
+            Ok(v) if v.is_empty() => 0,
+            Ok(v) => store_bytes(v.into_bytes()),
+            Err(e) => store_error(e),
+        }
+    }
+}
+
+impl ToWasmAbi for Result<Novel, QuelleError> {
+    type Type = i32;
+
+    #[inline]
+    fn to_wasm_abi(self) -> Self::Type {
+        match self {
+            Ok(v) => store_serde(v, false),
+            Err(e) => store_error(e),
+        }
+    }
+}
+
+impl ToWasmAbi for Result<Vec<BasicNovel>, QuelleError> {
+    type Type = i32;
+
+    #[inline]
+    fn to_wasm_abi(self) -> Self::Type {
+        match self {
+            Ok(v) => store_serde(v, false),
+            Err(e) => store_error(e),
+        }
+    }
+}
