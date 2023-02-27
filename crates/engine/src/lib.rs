@@ -347,17 +347,16 @@ impl Runner {
 
     fn read_bytes(&mut self, offset: i32) -> crate::error::Result<&[u8]> {
         let len = self.stack_pop()? as usize;
-        self.read_bytes_with_len(offset, len)
+        let bytes = self.read_bytes_with_len(offset, len);
+        Ok(bytes)
     }
 
-    fn read_bytes_with_len(&mut self, offset: i32, len: usize) -> crate::error::Result<&[u8]> {
-        let value = unsafe {
+    fn read_bytes_with_len(&self, offset: i32, len: usize) -> &[u8] {
+        unsafe {
             let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
             let bytes = slice::from_raw_parts(ptr, len);
             bytes
-        };
-
-        Ok(value)
+        }
     }
 
     fn parse_result<T, E>(&mut self, signed_len: i32) -> crate::error::Result<T>
@@ -412,20 +411,6 @@ impl Runner {
         }
     }
 
-    fn parse_result_raw(&mut self, signed_len: i32) -> error::Result<Option<&[u8]>> {
-        info!("parsing Result<T, E> from a result with length: {signed_len}");
-
-        if signed_len > 0 {
-            let offset = self.last_result()?;
-            let bytes = self.read_bytes_with_len(offset, signed_len as usize)?;
-            Ok(Some(bytes))
-        } else if signed_len < 0 {
-            self.parse_result_error::<_, QuelleError>(signed_len)
-        } else {
-            Ok(None)
-        }
-    }
-
     fn parse_result_error<T, E>(&mut self, signed_len: i32) -> error::Result<T>
     where
         E: DeserializeOwned,
@@ -448,7 +433,7 @@ impl Runner {
         f: impl Fn(&[u8]) -> crate::error::Result<T>,
     ) -> crate::error::Result<T> {
         let offset = self.last_result()?;
-        let bytes = self.read_bytes_with_len(offset, len)?;
+        let bytes = self.read_bytes_with_len(offset, len);
 
         let out = f(bytes);
 
