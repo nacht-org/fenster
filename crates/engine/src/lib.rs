@@ -4,6 +4,7 @@ use error::Error;
 use log::{debug, info, trace};
 use quelle_core::prelude::*;
 use reqwest::blocking::Client;
+use serde::de::DeserializeOwned;
 use std::{path::Path, slice, str::FromStr};
 use wasmtime::*;
 
@@ -155,6 +156,9 @@ struct Functions {
     stack_push: TypedFunc<i32, ()>,
     stack_pop: TypedFunc<(), i32>,
 
+    // Result
+    last_result: TypedFunc<(), i32>,
+
     // User
     setup: Option<TypedFunc<(), ()>>,
     meta: TypedFunc<(), i32>,
@@ -213,6 +217,7 @@ impl Runner {
             dealloc: get_func!("dealloc"),
             stack_push: get_func!("stack_push"),
             stack_pop: get_func!("stack_pop"),
+            last_result: get_func!("last_result"),
             setup: get_func_optional!("setup"),
             meta: get_func!("meta"),
             fetch_novel: get_func!("fetch_novel"),
@@ -270,17 +275,17 @@ impl Runner {
     pub fn fetch_novel(&mut self, url: &str) -> crate::error::Result<Novel> {
         let iptr = self.write_string(url)?;
         let offset = self.functions.fetch_novel.call(&mut self.store, iptr)?;
-        self.claim_result::<Novel, QuelleError>(offset)
+        self.parse_result::<Novel, QuelleError>(offset)
     }
 
-    pub fn fetch_chapter_content(&mut self, url: &str) -> crate::error::Result<Option<String>> {
+    pub fn fetch_chapter_content(&mut self, url: &str) -> crate::error::Result<String> {
         let iptr = self.write_string(url)?;
         let offset = self
             .functions
             .fetch_chapter_content
             .call(&mut self.store, iptr)?;
 
-        self.claim_result::<Option<String>, QuelleError>(offset)
+        self.parse_string_result::<QuelleError>(offset)
     }
 
     pub fn text_search_supported(&self) -> bool {
@@ -299,7 +304,7 @@ impl Runner {
             .unwrap()
             .call(&mut self.store, (query_ptr, page))?;
 
-        self.claim_result::<Vec<BasicNovel>, QuelleError>(offset)
+        self.parse_result::<Vec<BasicNovel>, QuelleError>(offset)
     }
 
     pub fn popular_supported(&self) -> bool {
@@ -337,12 +342,15 @@ impl Runner {
             .unwrap()
             .call(&mut self.store, page)?;
 
-        self.claim_result::<Vec<BasicNovel>, QuelleError>(offset)
+        self.parse_result::<Vec<BasicNovel>, QuelleError>(offset)
     }
 
     fn read_bytes(&mut self, offset: i32) -> crate::error::Result<&[u8]> {
         let len = self.stack_pop()? as usize;
+        self.read_bytes_with_len(offset, len)
+    }
 
+    fn read_bytes_with_len(&mut self, offset: i32, len: usize) -> crate::error::Result<&[u8]> {
         let value = unsafe {
             let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
             let bytes = slice::from_raw_parts(ptr, len);
@@ -352,19 +360,88 @@ impl Runner {
         Ok(value)
     }
 
-    fn claim_result<T, E>(&mut self, offset: i32) -> crate::error::Result<T>
+    fn parse_result<T, E>(&mut self, signed_len: i32) -> crate::error::Result<T>
     where
-        Result<T, E>: serde::de::DeserializeOwned,
+        T: serde::de::DeserializeOwned,
+        E: serde::de::DeserializeOwned,
         crate::error::Error: From<E>,
     {
-        let bytes = self.read_bytes(offset)?;
-        let result: Result<T, E> =
-            serde_json::from_reader(bytes).map_err(|_| Error::DeserializeError)?;
+        match self.parse_option_result(signed_len) {
+            Ok(None) => Err(error::Error::FailedResultAttempt),
+            Ok(Some(v)) => Ok(v),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn parse_option_result<T, E>(&mut self, signed_len: i32) -> error::Result<Option<T>>
+    where
+        T: serde::de::DeserializeOwned,
+        E: serde::de::DeserializeOwned,
+        crate::error::Error: From<E>,
+    {
+        info!("parsing Result<T, E> from a result with length: {signed_len}");
+
+        if signed_len > 0 {
+            self.with_result_bytes(signed_len as usize, |bytes| {
+                serde_json::from_reader::<_, T>(bytes)
+                    .map(|v| Some(v))
+                    .map_err(|_| Error::DeserializeError.into())
+            })
+        } else if signed_len < 0 {
+            self.parse_result_error(signed_len)
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn parse_string_result<E>(&mut self, signed_len: i32) -> error::Result<String>
+    where
+        E: DeserializeOwned,
+        error::Error: From<E>,
+    {
+        info!("parsing Result<String, E> from a result with length: {signed_len}");
+
+        if signed_len > 0 {
+            self.with_result_bytes(signed_len as usize, |bytes| {
+                String::from_utf8(bytes.to_vec()).map_err(|e| e.into())
+            })
+        } else if signed_len < 0 {
+            self.parse_result_error(signed_len)
+        } else {
+            Ok(Default::default())
+        }
+    }
+
+    fn parse_result_error<T, E>(&mut self, signed_len: i32) -> error::Result<T>
+    where
+        E: DeserializeOwned,
+        error::Error: From<E>,
+    {
+        self.with_result_bytes((-signed_len) as usize, |bytes| {
+            let err: Result<E, error::Error> =
+                serde_json::from_reader::<_, E>(bytes).map_err(|_| Error::DeserializeError.into());
+
+            match err {
+                Ok(v) => Err(v.into()),
+                Err(e) => Err(e),
+            }
+        })
+    }
+
+    fn with_result_bytes<T>(
+        &mut self,
+        len: usize,
+        f: impl Fn(&[u8]) -> crate::error::Result<T>,
+    ) -> crate::error::Result<T> {
+        let offset = self.last_result()?;
+        let bytes = self.read_bytes_with_len(offset, len)?;
+
+        let out = f(bytes);
 
         let len = bytes.len() as i32;
         self.dealloc_memory(offset, len)?;
 
-        result.map_err(|e| e.into())
+        out
     }
 
     fn write_string(&mut self, value: &str) -> crate::error::Result<i32> {
@@ -403,6 +480,13 @@ impl Runner {
     fn stack_pop(&mut self) -> crate::error::Result<i32> {
         self.functions
             .stack_pop
+            .call(&mut self.store, ())
+            .map_err(|e| e.into())
+    }
+
+    fn last_result(&mut self) -> error::Result<i32> {
+        self.functions
+            .last_result
             .call(&mut self.store, ())
             .map_err(|e| e.into())
     }

@@ -1,4 +1,4 @@
-mod args;
+mod params;
 
 use proc_macro2::{TokenStream, TokenTree};
 use quote::quote;
@@ -8,14 +8,10 @@ use syn::{
     parse_macro_input,
     punctuated::Punctuated,
     token::Comma,
-    Block, FnArg, Ident, Path, ReturnType, Token, TypePath,
+    Block, FnArg, Ident, ReturnType, Token,
 };
 
-use crate::args::{get_extern_params, get_extern_params_stream};
-
-const SUPPORTED_TYPES: [&'static str; 10] = [
-    "u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64", "f32", "f64",
-];
+use crate::params::{get_extern_params, get_extern_params_stream};
 
 struct Expose {
     name: Ident,
@@ -87,46 +83,23 @@ pub fn expose(
         .map(|params| {
             params
                 .iter()
-                .map(|arg| {
-                    let pat = &arg.pat.pat;
-                    let ty = &arg.pat.ty;
+                .map(|pattype| {
+                    let ident = &pattype.pat;
+                    let ty = &pattype.ty;
 
-                    macro_rules! match_rtype {
-                        ($($ty:expr => $ac:block),+, _ => $el:block) => {
-                            match ty.as_ref() {
-                                $(
-                                    syn::Type::Path(TypePath {qself: _, path: Path { leading_colon: _, segments }}) if $ty.contains(&segments.last().unwrap().ident.to_string().as_str()) => $ac
-                                ),*
-                                syn::Type::Path(TypePath {qself: _, path: _}) => $el,
-                                _ => panic!("'{}' is not supported in exposed function", quote!(#ty)),
-                            }
-                        };
-                    }
-
-                    match_rtype! {
-                        SUPPORTED_TYPES => {
-                            quote! {}
-                        },
-                        _ => {
-                            quote! {
-                                let #pat: #ty = #ty::from_wasm_abi(#pat);
-                            }
-                        }
+                    quote! {
+                        let #ident: #ty = <#ty as FromWasmAbi>::from_wasm_abi(#ident);
                     }
                 })
                 .collect::<Vec<_>>()
         })
-        .map(|streams| {
-            quote! {
-                #(#streams)*
-            }
-        })
+        .map(|streams| quote!( #(#streams)* ))
         .unwrap_or(quote!());
 
     let extern_return = {
         match &rtype {
             ReturnType::Default => quote!(),
-            ReturnType::Type(_, _) => quote!( -> *mut u8 ),
+            ReturnType::Type(_, ty) => quote!( -> <#ty as ToWasmAbi>::Type ),
         }
     };
 
@@ -144,14 +117,14 @@ pub fn expose(
         match &rtype {
             ReturnType::Default => quote!(),
             ReturnType::Type(_, _) => {
-                let args = extern_params.map(|params| {
+                let args = extern_params.as_ref().map(|params| {
                     params
                         .iter()
-                        .map(|arg| arg.pat.pat.clone())
+                        .map(|arg| &arg.pat)
                         .collect::<Punctuated<_, Comma>>()
                 });
 
-                quote!( __inner_fn(#args).to_wasm_abi() )
+                quote!( ToWasmAbi::to_wasm_abi(__inner_fn(#args)) )
             }
         }
     };

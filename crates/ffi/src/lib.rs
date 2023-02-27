@@ -85,7 +85,7 @@ fn fetch_chapter_content_private(
     let engine = unsafe { engine.as_mut().unwrap() };
 
     let content = engine.fetch_chapter_content(url)?;
-    write_buffer(buffer, content.unwrap_or_default())?;
+    write_buffer(buffer, content)?;
 
     Ok(())
 }

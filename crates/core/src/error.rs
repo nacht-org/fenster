@@ -11,6 +11,9 @@ pub enum QuelleError {
 
     #[error("{0}")]
     ParseFailed(#[from] ParseError),
+
+    #[error("{0}")]
+    WasmAbiError(String),
 }
 
 #[derive(Serialize, Deserialize, thiserror::Error, Debug)]

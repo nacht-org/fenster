@@ -1,46 +1,8 @@
-use std::{mem, sync::Mutex};
+use std::mem;
 
 use quelle_core::prelude::Meta;
-use serde::Serialize;
 
-#[no_mangle]
-pub extern "C" fn alloc(len: usize) -> *mut u8 {
-    let layout = std::alloc::Layout::from_size_align(len, 1).unwrap();
-    unsafe { std::alloc::alloc(layout) }
-}
-
-#[no_mangle]
-pub extern "C" fn dealloc(ptr: *mut u8, len: usize) {
-    let layout = std::alloc::Layout::from_size_align(len, 1).unwrap();
-    unsafe { std::alloc::dealloc(ptr, layout) }
-}
-
-#[derive(Debug)]
-struct Stack {
-    array: [i32; 256],
-    top: usize,
-}
-
-static STACK: Mutex<Stack> = Mutex::new(Stack {
-    array: [0; 256],
-    top: 0,
-});
-
-#[no_mangle]
-pub extern "C" fn stack_push(value: i32) {
-    let mut stack = STACK.lock().unwrap();
-    let top = stack.top;
-    stack.array[top] = value;
-    stack.top += 1;
-}
-
-#[no_mangle]
-pub extern "C" fn stack_pop() -> i32 {
-    let mut stack = STACK.lock().unwrap();
-    stack.top -= 1;
-    let value = stack.array[stack.top];
-    value
-}
+use super::{stack_pop, stack_push};
 
 pub trait ToWasmAbi {
     type Type;
@@ -96,7 +58,7 @@ macro_rules! impl_wasm_abi_for_serde {
 #[macro_export]
 macro_rules! impl_from_abi_for_serde {
     ($name:ty) => {
-        impl crate::mem::FromMem for $name {
+        impl crate::abi::ToWasmAbi for $name {
             type Type = *mut u8;
 
             fn from_wasm_abi(value: Self::Type) -> Self {
@@ -127,19 +89,3 @@ macro_rules! impl_to_abi_for_serde {
 }
 
 impl_to_abi_for_serde!(&Meta);
-
-impl<T, E> ToWasmAbi for Result<T, E>
-where
-    Self: Serialize,
-{
-    type Type = *mut u8;
-
-    fn to_wasm_abi(self) -> Self::Type {
-        let mut string = serde_json::to_string(&self).unwrap();
-        crate::abi::stack_push(string.len() as i32);
-
-        let ptr = string.as_mut_ptr();
-        mem::forget(string);
-        ptr
-    }
-}

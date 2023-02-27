@@ -140,8 +140,6 @@ impl DownloadHandler {
             }
 
             let content = runner.fetch_chapter_content(&chapter.url)?;
-            let Some(content) = content else { continue };
-
             let filename = format!("{}.html", chapter.index);
             let path = chapter_dir.join(&filename);
             fs::write(&path, content)?;
