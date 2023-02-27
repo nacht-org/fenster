@@ -222,7 +222,7 @@ impl Runner {
             meta: get_func!("meta"),
             fetch_novel: get_func!("fetch_novel"),
             fetch_chapter_content: get_func!("fetch_chapter_content"),
-            text_search: get_func_optional!("query_search"),
+            text_search: get_func_optional!("text_search"),
             popular_url: get_func_optional!("popular_url"),
             popular: get_func_optional!("popular"),
         };
@@ -298,19 +298,29 @@ impl Runner {
         self.functions.text_search.is_some()
     }
 
-    pub fn text_search(&mut self, query: &str, page: i32) -> crate::error::Result<Vec<BasicNovel>> {
+    fn call_text_search(&mut self, query: &str, page: i32) -> crate::error::Result<i32> {
         if self.functions.text_search.is_none() {
             return Err(error::Error::NotSupported(error::AffectedFunction::Search));
         }
 
         let query_ptr = self.write_string(query)?;
-        let offset = self
+        let signed_len = self
             .functions
             .text_search
             .unwrap()
             .call(&mut self.store, (query_ptr, page))?;
 
-        self.parse_result::<Vec<BasicNovel>, QuelleError>(offset)
+        Ok(signed_len)
+    }
+
+    pub fn text_search(&mut self, query: &str, page: i32) -> crate::error::Result<Vec<BasicNovel>> {
+        let signed_len = self.call_text_search(query, page)?;
+        self.parse_result::<Vec<BasicNovel>, QuelleError>(signed_len)
+    }
+
+    pub fn text_search_raw(&mut self, query: &str, page: i32) -> error::Result<String> {
+        let signed_len = self.call_text_search(query, page)?;
+        self.parse_string_result::<QuelleError>(signed_len)
     }
 
     pub fn popular_supported(&self) -> bool {

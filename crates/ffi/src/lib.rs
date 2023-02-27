@@ -106,6 +106,28 @@ fn popular_private(
     write_buffer(buffer, content)
 }
 
+#[no_mangle]
+pub extern "C" fn text_search(
+    engine: *mut Runner,
+    query: *mut c_char,
+    page: i32,
+    buffer: *mut *mut c_char,
+) -> i32 {
+    error::capture_error(|| text_search_private(engine, query, page, buffer))
+}
+
+fn text_search_private(
+    engine: *mut Runner,
+    query: *mut c_char,
+    page: i32,
+    buffer: *mut *mut c_char,
+) -> Result<(), Box<dyn Error>> {
+    let query = unsafe { CStr::from_ptr(query) }.to_str()?;
+    let engine = unsafe { engine.as_mut().unwrap() };
+    let content = engine.text_search_raw(query, page)?;
+    write_buffer(buffer, content)
+}
+
 fn write_buffer(buffer: *mut *mut c_char, content: String) -> Result<(), Box<dyn Error>> {
     let cstring = CString::new(content)?;
     // The caller is responsible for handling the output

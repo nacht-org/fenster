@@ -106,6 +106,25 @@ class Quelle {
     return content;
   }
 
+  String textSearchJson(String query, int page) {
+    final queryC = Utf8Resource(query.toNativeUtf8());
+    Pointer<Pointer<Utf8>> buffer = calloc();
+    String content;
+
+    try {
+      final result =
+          bindings.text_search(_engine.unsafe(), queryC.unsafe(), page, buffer);
+      if (result != 0) throw _readError();
+      content = buffer.value.toDartString();
+    } finally {
+      queryC.free();
+      calloc.free(buffer.value);
+      calloc.free(buffer);
+    }
+
+    return content;
+  }
+
   QuelleException _readError() {
     Pointer<Pointer<Utf8>> buffer = calloc();
     bindings.last_error_message(buffer);

@@ -32,3 +32,10 @@ typedef popular_native_t = Int32 Function(
   Int32 page,
   Pointer<Pointer<Utf8>> buffer,
 );
+
+typedef text_search_native_t = Int32 Function(
+  Pointer<Engine> engine,
+  Pointer<Utf8> query,
+  Int32 page,
+  Pointer<Pointer<Utf8>> buffer,
+);
