@@ -127,8 +127,6 @@ fn collect_toc(url: &str) -> Result<Vec<Volume>, QuelleError> {
             .trim()
             .parse::<usize>()?;
 
-        println!("end: {end}");
-
         for page in 2..=end {
             let curl = toc_url(url, page);
             let response = Request::get(curl).send()?;
