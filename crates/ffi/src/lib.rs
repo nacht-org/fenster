@@ -60,8 +60,7 @@ fn fetch_novel_private(
     let url = unsafe { CStr::from_ptr(url) }.to_str()?;
     let engine = unsafe { engine.as_mut().unwrap() };
 
-    let novel = engine.fetch_novel(url)?;
-    let content = serde_json::to_string(&novel)?;
+    let content = engine.fetch_novel_raw(url)?;
     write_buffer(buffer, content)?;
 
     Ok(())
