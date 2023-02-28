@@ -22,9 +22,16 @@ void main(List<String> args) {
   final popularSupported = quelle.popularSupported();
   print("popularSupported=$popularSupported");
 
-  final popularNovels = quelle.popularJson(1);
-  print(popularNovels);
+  if (popularSupported) {
+    final popularNovels = quelle.popularJson(1);
+    print(popularNovels);
+  }
 
-  final textSearchResults = quelle.textSearchJson("solo", 1);
-  print(textSearchResults);
+  final textSearchSupported = quelle.textSearchSupported();
+  print("textSearchSupported=$textSearchSupported");
+
+  if (textSearchSupported) {
+    final textSearchResults = quelle.textSearchJson("solo", 1);
+    print(textSearchResults);
+  }
 }

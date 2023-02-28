@@ -35,6 +35,8 @@ class QuelleBindings {
     Pointer<Pointer<Utf8>> buffer,
   ) text_search;
 
+  late int Function(Pointer<Engine> engine) text_search_supported;
+
   late int Function(Pointer<Pointer<Utf8>> buffer) last_error_message;
 
   QuelleBindings() {
@@ -62,6 +64,10 @@ class QuelleBindings {
         quelle.lookup<NativeFunction<popular_native_t>>("popular").asFunction();
     text_search = quelle
         .lookup<NativeFunction<text_search_native_t>>("text_search")
+        .asFunction();
+    text_search_supported = quelle
+        .lookup<NativeFunction<text_search_supported_native_t>>(
+            "text_search_supported")
         .asFunction();
     last_error_message = quelle
         .lookup<NativeFunction<last_error_message_native_t>>(

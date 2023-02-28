@@ -112,6 +112,12 @@ class Quelle {
     return content;
   }
 
+  bool textSearchSupported() {
+    final result = bindings.text_search_supported(_engine.unsafe());
+    if (result < 0) throw _readError();
+    return result > 0;
+  }
+
   String textSearchJson(String query, int page) {
     final queryC = Utf8Resource(query.toNativeUtf8());
     Pointer<Pointer<Utf8>> buffer = calloc();

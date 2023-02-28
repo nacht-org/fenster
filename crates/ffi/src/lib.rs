@@ -99,7 +99,7 @@ fn fetch_chapter_content_private(
 pub extern "C" fn popular_supported(engine: *mut Runner) -> i32 {
     error::capture_error_with_return(|| {
         let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
-        Ok(if engine.popular_supported() { 1 } else { 0 })
+        Ok(engine.popular_supported() as i32)
     })
 }
 
@@ -111,6 +111,14 @@ pub extern "C" fn popular(engine: *mut Runner, page: i32, buffer: *mut *mut c_ch
         let content = serde_json::to_string(&novels)?;
 
         write_buffer(buffer, content)
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn text_search_supported(engine: *mut Runner) -> i32 {
+    error::capture_error_with_return(|| {
+        let engine = unsafe { engine.as_ref().ok_or(CustomError::WrongEnginePtr)? };
+        Ok(engine.text_search_supported() as i32)
     })
 }
 
