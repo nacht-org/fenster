@@ -23,6 +23,8 @@ class QuelleBindings {
   late int Function(Pointer<Engine> engine, Pointer<Utf8> url,
       Pointer<Pointer<Utf8>> buffer) fetch_chapter_content;
 
+  late int Function(Pointer<Engine> engine) popular_supported;
+
   late int Function(
       Pointer<Engine> engine, int page, Pointer<Pointer<Utf8>> buffer) popular;
 
@@ -51,6 +53,10 @@ class QuelleBindings {
     fetch_chapter_content = quelle
         .lookup<NativeFunction<fetch_chapter_content_native_t>>(
             "fetch_chapter_content")
+        .asFunction();
+    popular_supported = quelle
+        .lookup<NativeFunction<popular_suppported_native_t>>(
+            "popular_supported")
         .asFunction();
     popular =
         quelle.lookup<NativeFunction<popular_native_t>>("popular").asFunction();

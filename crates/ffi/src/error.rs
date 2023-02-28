@@ -68,3 +68,13 @@ pub fn capture_error(f: impl Fn() -> Result<(), Box<dyn Error>>) -> i32 {
         }
     }
 }
+
+pub fn capture_error_with_return(f: impl Fn() -> Result<i32, Box<dyn Error>>) -> i32 {
+    match f() {
+        Ok(v) => v,
+        Err(e) => {
+            update_last_error(e);
+            -1
+        }
+    }
+}

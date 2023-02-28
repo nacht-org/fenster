@@ -19,8 +19,11 @@ void main(List<String> args) {
   //     "https://www.novelpub.com/novel/the-villains-side-of-the-novel-1495/chapter-1");
   // print(content);
 
-  // final popularNovels = quelle.popularJson(1);
-  // print(popularNovels);
+  final popularSupported = quelle.popularSupported();
+  print("popularSupported=$popularSupported");
+
+  final popularNovels = quelle.popularJson(1);
+  print(popularNovels);
 
   final textSearchResults = quelle.textSearchJson("solo", 1);
   print(textSearchResults);

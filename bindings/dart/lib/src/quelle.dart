@@ -90,6 +90,12 @@ class Quelle {
     return content;
   }
 
+  bool popularSupported() {
+    final result = bindings.popular_supported(_engine.unsafe());
+    if (result < 0) throw _readError();
+    return result > 0;
+  }
+
   String popularJson(int page) {
     Pointer<Pointer<Utf8>> buffer = calloc();
     String content;

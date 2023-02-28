@@ -9,6 +9,12 @@ use std::{
 
 use quelle_engine::Runner;
 
+#[derive(thiserror::Error, Debug)]
+enum CustomError {
+    #[error("pointer does not reference a valid engine")]
+    WrongEnginePtr,
+}
+
 #[no_mangle]
 pub extern "C" fn open_engine_with_path(path: *const c_char, engine_out: *mut *mut Runner) -> i32 {
     env_logger::init();
@@ -37,7 +43,7 @@ fn source_meta_private(
     engine: *mut Runner,
     buffer: *mut *mut c_char,
 ) -> Result<(), Box<dyn Error>> {
-    let engine = unsafe { engine.as_mut().unwrap() };
+    let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
     let meta = engine.meta_raw()?;
     write_buffer(buffer, meta)?;
     Ok(())
@@ -58,7 +64,7 @@ fn fetch_novel_private(
     buffer: *mut *mut c_char,
 ) -> Result<(), Box<dyn Error>> {
     let url = unsafe { CStr::from_ptr(url) }.to_str()?;
-    let engine = unsafe { engine.as_mut().unwrap() };
+    let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
 
     let content = engine.fetch_novel_raw(url)?;
     write_buffer(buffer, content)?;
@@ -81,7 +87,7 @@ fn fetch_chapter_content_private(
     buffer: *mut *mut c_char,
 ) -> Result<(), Box<dyn Error>> {
     let url = unsafe { CStr::from_ptr(url) }.to_str()?;
-    let engine = unsafe { engine.as_mut().unwrap() };
+    let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
 
     let content = engine.fetch_chapter_content(url)?;
     write_buffer(buffer, content)?;
@@ -90,20 +96,22 @@ fn fetch_chapter_content_private(
 }
 
 #[no_mangle]
-pub extern "C" fn popular(engine: *mut Runner, page: i32, buffer: *mut *mut c_char) -> i32 {
-    error::capture_error(|| popular_private(engine, page, buffer))
+pub extern "C" fn popular_supported(engine: *mut Runner) -> i32 {
+    error::capture_error_with_return(|| {
+        let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
+        Ok(if engine.popular_supported() { 1 } else { 0 })
+    })
 }
 
-fn popular_private(
-    engine: *mut Runner,
-    page: i32,
-    buffer: *mut *mut c_char,
-) -> Result<(), Box<dyn Error>> {
-    let engine = unsafe { engine.as_mut().unwrap() };
-    let novels = engine.popular(page)?;
-    let content = serde_json::to_string(&novels)?;
+#[no_mangle]
+pub extern "C" fn popular(engine: *mut Runner, page: i32, buffer: *mut *mut c_char) -> i32 {
+    error::capture_error(|| {
+        let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
+        let novels = engine.popular(page)?;
+        let content = serde_json::to_string(&novels)?;
 
-    write_buffer(buffer, content)
+        write_buffer(buffer, content)
+    })
 }
 
 #[no_mangle]
@@ -123,7 +131,7 @@ fn text_search_private(
     buffer: *mut *mut c_char,
 ) -> Result<(), Box<dyn Error>> {
     let query = unsafe { CStr::from_ptr(query) }.to_str()?;
-    let engine = unsafe { engine.as_mut().unwrap() };
+    let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
     let content = engine.text_search_raw(query, page)?;
     write_buffer(buffer, content)
 }
