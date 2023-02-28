@@ -38,18 +38,14 @@ class Quelle {
 
   String fetchNovelJson(String url) {
     final urlC = Utf8Resource(url.toNativeUtf8());
-    Pointer<Pointer<Utf8>> buffer = calloc();
     String json;
 
     try {
-      final result =
-          bindings.fetch_novel(_engine.unsafe(), urlC.unsafe(), buffer);
-      if (result != 0) throw _readError();
-      json = buffer.value.toDartString();
+      final signedLength =
+          bindings.fetch_novel(_engine.unsafe(), urlC.unsafe());
+      json = _readStringResult(signedLength);
     } finally {
       urlC.free();
-      calloc.free(buffer.value);
-      calloc.free(buffer);
     }
 
     return json;
@@ -62,18 +58,14 @@ class Quelle {
 
   String fetchChapterContent(String url) {
     final urlC = Utf8Resource(url.toNativeUtf8());
-    Pointer<Pointer<Utf8>> buffer = calloc();
     String content;
 
     try {
-      final result = bindings.fetch_chapter_content(
-          _engine.unsafe(), urlC.unsafe(), buffer);
-      if (result != 0) throw _readError();
-      content = buffer.value.toDartString();
+      final signedLength =
+          bindings.fetch_chapter_content(_engine.unsafe(), urlC.unsafe());
+      content = _readStringResult(signedLength);
     } finally {
       urlC.free();
-      calloc.free(buffer.value);
-      calloc.free(buffer);
     }
 
     return content;
@@ -86,19 +78,8 @@ class Quelle {
   }
 
   String popularJson(int page) {
-    Pointer<Pointer<Utf8>> buffer = calloc();
-    String content;
-
-    try {
-      final result = bindings.popular(_engine.unsafe(), page, buffer);
-      if (result != 0) throw _readError();
-      content = buffer.value.toDartString();
-    } finally {
-      calloc.free(buffer.value);
-      calloc.free(buffer);
-    }
-
-    return content;
+    final signedLength = bindings.popular(_engine.unsafe(), page);
+    return _readStringResult(signedLength);
   }
 
   bool textSearchSupported() {
@@ -109,18 +90,14 @@ class Quelle {
 
   String textSearchJson(String query, int page) {
     final queryC = Utf8Resource(query.toNativeUtf8());
-    Pointer<Pointer<Utf8>> buffer = calloc();
     String content;
 
     try {
-      final result =
-          bindings.text_search(_engine.unsafe(), queryC.unsafe(), page, buffer);
-      if (result != 0) throw _readError();
-      content = buffer.value.toDartString();
+      final signedLength =
+          bindings.text_search(_engine.unsafe(), queryC.unsafe(), page);
+      content = _readStringResult(signedLength);
     } finally {
       queryC.free();
-      calloc.free(buffer.value);
-      calloc.free(buffer);
     }
 
     return content;
@@ -129,10 +106,13 @@ class Quelle {
   String _readStringResult(int signedLength) {
     if (signedLength > 0) {
       final pointer = bindings.last_result();
-      return pointer.toDartString(length: signedLength);
+      final value = pointer.toDartString(length: signedLength);
+      calloc.free(pointer);
+      return value;
     } else if (signedLength < 0) {
       final pointer = bindings.last_result();
       final errorMessage = pointer.toDartString(length: -signedLength);
+      calloc.free(pointer);
       throw QuelleException(errorMessage);
     } else {
       return '';

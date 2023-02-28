@@ -3,8 +3,7 @@ mod result;
 
 use std::{
     error::Error,
-    ffi::{c_char, CStr, CString},
-    mem,
+    ffi::{c_char, CStr},
     path::Path,
 };
 
@@ -45,49 +44,25 @@ pub extern "C" fn source_meta(engine: *mut Runner) -> i32 {
 }
 
 #[no_mangle]
-pub extern "C" fn fetch_novel(
-    engine: *mut Runner,
-    url: *mut c_char,
-    buffer: *mut *mut c_char,
-) -> i32 {
-    error::capture_error(|| fetch_novel_private(engine, url, buffer))
-}
+pub extern "C" fn fetch_novel(engine: *mut Runner, url: *mut c_char) -> i32 {
+    result::capture_result(|| {
+        let url = unsafe { CStr::from_ptr(url) }.to_str()?;
+        let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
 
-fn fetch_novel_private(
-    engine: *mut Runner,
-    url: *mut c_char,
-    buffer: *mut *mut c_char,
-) -> Result<(), Box<dyn Error>> {
-    let url = unsafe { CStr::from_ptr(url) }.to_str()?;
-    let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
-
-    let content = engine.fetch_novel_raw(url)?;
-    write_buffer(buffer, content)?;
-
-    Ok(())
+        let content = engine.fetch_novel_raw(url)?;
+        Ok(content.into_bytes())
+    })
 }
 
 #[no_mangle]
-pub extern "C" fn fetch_chapter_content(
-    engine: *mut Runner,
-    url: *mut c_char,
-    buffer: *mut *mut c_char,
-) -> i32 {
-    error::capture_error(|| fetch_chapter_content_private(engine, url, buffer))
-}
+pub extern "C" fn fetch_chapter_content(engine: *mut Runner, url: *mut c_char) -> i32 {
+    result::capture_result(|| {
+        let url = unsafe { CStr::from_ptr(url) }.to_str()?;
+        let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
 
-fn fetch_chapter_content_private(
-    engine: *mut Runner,
-    url: *mut c_char,
-    buffer: *mut *mut c_char,
-) -> Result<(), Box<dyn Error>> {
-    let url = unsafe { CStr::from_ptr(url) }.to_str()?;
-    let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
-
-    let content = engine.fetch_chapter_content(url)?;
-    write_buffer(buffer, content)?;
-
-    Ok(())
+        let content = engine.fetch_chapter_content(url)?;
+        Ok(content.into_bytes())
+    })
 }
 
 #[no_mangle]
@@ -99,13 +74,12 @@ pub extern "C" fn popular_supported(engine: *mut Runner) -> i32 {
 }
 
 #[no_mangle]
-pub extern "C" fn popular(engine: *mut Runner, page: i32, buffer: *mut *mut c_char) -> i32 {
-    error::capture_error(|| {
+pub extern "C" fn popular(engine: *mut Runner, page: i32) -> i32 {
+    result::capture_result(|| {
         let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
         let novels = engine.popular(page)?;
         let content = serde_json::to_string(&novels)?;
-
-        write_buffer(buffer, content)
+        Ok(content.into_bytes())
     })
 }
 
@@ -118,31 +92,11 @@ pub extern "C" fn text_search_supported(engine: *mut Runner) -> i32 {
 }
 
 #[no_mangle]
-pub extern "C" fn text_search(
-    engine: *mut Runner,
-    query: *mut c_char,
-    page: i32,
-    buffer: *mut *mut c_char,
-) -> i32 {
-    error::capture_error(|| text_search_private(engine, query, page, buffer))
-}
-
-fn text_search_private(
-    engine: *mut Runner,
-    query: *mut c_char,
-    page: i32,
-    buffer: *mut *mut c_char,
-) -> Result<(), Box<dyn Error>> {
-    let query = unsafe { CStr::from_ptr(query) }.to_str()?;
-    let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
-    let content = engine.text_search_raw(query, page)?;
-    write_buffer(buffer, content)
-}
-
-fn write_buffer(buffer: *mut *mut c_char, content: String) -> Result<(), Box<dyn Error>> {
-    let cstring = CString::new(content)?;
-    // The caller is responsible for handling the output
-    unsafe { *buffer = cstring.as_ptr() as *mut c_char };
-    mem::forget(cstring);
-    Ok(())
+pub extern "C" fn text_search(engine: *mut Runner, query: *mut c_char, page: i32) -> i32 {
+    result::capture_result(|| {
+        let query = unsafe { CStr::from_ptr(query) }.to_str()?;
+        let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
+        let content = engine.text_search_raw(query, page)?;
+        Ok(content.into_bytes())
+    })
 }

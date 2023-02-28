@@ -16,22 +16,19 @@ class QuelleBindings {
 
   late int Function(Pointer<Engine> engine) source_meta;
 
-  late int Function(Pointer<Engine> engine, Pointer<Utf8> url,
-      Pointer<Pointer<Utf8>> buffer) fetch_novel;
+  late int Function(Pointer<Engine> engine, Pointer<Utf8> url) fetch_novel;
 
-  late int Function(Pointer<Engine> engine, Pointer<Utf8> url,
-      Pointer<Pointer<Utf8>> buffer) fetch_chapter_content;
+  late int Function(Pointer<Engine> engine, Pointer<Utf8> url)
+      fetch_chapter_content;
 
   late int Function(Pointer<Engine> engine) popular_supported;
 
-  late int Function(
-      Pointer<Engine> engine, int page, Pointer<Pointer<Utf8>> buffer) popular;
+  late int Function(Pointer<Engine> engine, int page) popular;
 
   late int Function(
     Pointer<Engine> engine,
     Pointer<Utf8> query,
     int page,
-    Pointer<Pointer<Utf8>> buffer,
   ) text_search;
 
   late int Function(Pointer<Engine> engine) text_search_supported;

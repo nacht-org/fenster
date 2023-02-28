@@ -19,19 +19,16 @@ typedef last_result_native_t = Pointer<Utf8> Function();
 typedef fetch_novel_native_t = Int32 Function(
   Pointer<Engine> engine,
   Pointer<Utf8> url,
-  Pointer<Pointer<Utf8>> buffer,
 );
 
 typedef fetch_chapter_content_native_t = Int32 Function(
   Pointer<Engine> engine,
   Pointer<Utf8> url,
-  Pointer<Pointer<Utf8>> buffer,
 );
 
 typedef popular_native_t = Int32 Function(
   Pointer<Engine> engine,
   Int32 page,
-  Pointer<Pointer<Utf8>> buffer,
 );
 
 typedef popular_suppported_native_t = Int32 Function(
@@ -42,7 +39,6 @@ typedef text_search_native_t = Int32 Function(
   Pointer<Engine> engine,
   Pointer<Utf8> query,
   Int32 page,
-  Pointer<Pointer<Utf8>> buffer,
 );
 
 typedef text_search_supported_native_t = Int32 Function(
