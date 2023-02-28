@@ -1,4 +1,5 @@
 mod error;
+mod result;
 
 use std::{
     error::Error,
@@ -35,18 +36,12 @@ fn open_engine_with_path_private(
 }
 
 #[no_mangle]
-pub extern "C" fn source_meta(engine: *mut Runner, out: *mut *mut c_char) -> i32 {
-    error::capture_error(|| source_meta_private(engine, out))
-}
-
-fn source_meta_private(
-    engine: *mut Runner,
-    buffer: *mut *mut c_char,
-) -> Result<(), Box<dyn Error>> {
-    let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
-    let meta = engine.meta_raw()?;
-    write_buffer(buffer, meta)?;
-    Ok(())
+pub extern "C" fn source_meta(engine: *mut Runner) -> i32 {
+    result::capture_result(|| {
+        let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
+        let meta = engine.meta_raw()?;
+        Ok(meta.into_bytes())
+    })
 }
 
 #[no_mangle]

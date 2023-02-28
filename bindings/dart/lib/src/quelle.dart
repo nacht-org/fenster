@@ -27,19 +27,8 @@ class Quelle {
   }
 
   String metaJson() {
-    Pointer<Pointer<Utf8>> buffer = calloc();
-    String json;
-
-    try {
-      final result = bindings.source_meta(_engine.unsafe(), buffer);
-      if (result != 0) throw _readError();
-      json = buffer.value.toDartString();
-    } finally {
-      calloc.free(buffer.value);
-      calloc.free(buffer);
-    }
-
-    return json;
+    final signedLength = bindings.source_meta(_engine.unsafe());
+    return _readStringResult(signedLength);
   }
 
   Meta meta() {
@@ -135,6 +124,19 @@ class Quelle {
     }
 
     return content;
+  }
+
+  String _readStringResult(int signedLength) {
+    if (signedLength > 0) {
+      final pointer = bindings.last_result();
+      return pointer.toDartString(length: signedLength);
+    } else if (signedLength < 0) {
+      final pointer = bindings.last_result();
+      final errorMessage = pointer.toDartString(length: -signedLength);
+      throw QuelleException(errorMessage);
+    } else {
+      return '';
+    }
   }
 
   QuelleException _readError() {

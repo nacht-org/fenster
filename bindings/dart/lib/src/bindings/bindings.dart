@@ -14,8 +14,7 @@ class QuelleBindings {
   late int Function(Pointer<Utf8> path, Pointer<Pointer<Engine>> engine_out)
       open_engine_with_path;
 
-  late int Function(Pointer<Engine> engine, Pointer<Pointer<Utf8>> buffer)
-      source_meta;
+  late int Function(Pointer<Engine> engine) source_meta;
 
   late int Function(Pointer<Engine> engine, Pointer<Utf8> url,
       Pointer<Pointer<Utf8>> buffer) fetch_novel;
@@ -38,6 +37,8 @@ class QuelleBindings {
   late int Function(Pointer<Engine> engine) text_search_supported;
 
   late int Function(Pointer<Pointer<Utf8>> buffer) last_error_message;
+
+  late Pointer<Utf8> Function() last_result;
 
   QuelleBindings() {
     quelle = loadDynamicLibrary();
@@ -72,6 +73,9 @@ class QuelleBindings {
     last_error_message = quelle
         .lookup<NativeFunction<last_error_message_native_t>>(
             "last_error_message")
+        .asFunction();
+    last_result = quelle
+        .lookup<NativeFunction<last_result_native_t>>("last_result")
         .asFunction();
   }
 }
