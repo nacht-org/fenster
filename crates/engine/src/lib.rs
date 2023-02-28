@@ -299,18 +299,13 @@ impl Runner {
     }
 
     fn call_text_search(&mut self, query: &str, page: i32) -> crate::error::Result<i32> {
-        if self.functions.text_search.is_none() {
-            return Err(error::Error::NotSupported(error::AffectedFunction::Search));
+        if let Some(text_search) = self.functions.text_search {
+            let query_ptr = self.write_string(query)?;
+            let signed_len = text_search.call(&mut self.store, (query_ptr, page))?;
+            Ok(signed_len)
+        } else {
+            Err(error::Error::NotSupported(error::AffectedFunction::Search))
         }
-
-        let query_ptr = self.write_string(query)?;
-        let signed_len = self
-            .functions
-            .text_search
-            .unwrap()
-            .call(&mut self.store, (query_ptr, page))?;
-
-        Ok(signed_len)
     }
 
     pub fn text_search(&mut self, query: &str, page: i32) -> crate::error::Result<Vec<BasicNovel>> {
@@ -328,36 +323,30 @@ impl Runner {
     }
 
     pub fn popular_url(&mut self, page: i32) -> crate::error::Result<String> {
-        if self.functions.popular_url.is_none() {
-            return Err(error::Error::NotSupported(error::AffectedFunction::Popular));
+        if let Some(popular_url) = self.functions.popular_url {
+            let rptr = popular_url.call(&mut self.store, page)?;
+            let bytes = self.read_bytes(rptr)?;
+            let string = String::from_utf8_lossy(bytes).to_string();
+
+            let len = bytes.len() as i32;
+            self.dealloc_memory(rptr, len)?;
+
+            Ok(string)
+        } else {
+            Err(error::Error::NotSupported(error::AffectedFunction::Popular))
         }
+    }
 
-        let rptr = self
-            .functions
-            .popular_url
-            .unwrap()
-            .call(&mut self.store, page)?;
-
-        let bytes = self.read_bytes(rptr)?;
-        let string = String::from_utf8_lossy(bytes).to_string();
-
-        let len = bytes.len() as i32;
-        self.dealloc_memory(rptr, len)?;
-
-        Ok(string)
+    fn call_popular(&mut self, page: i32) -> error::Result<i32> {
+        if let Some(popular) = self.functions.popular {
+            popular.call(&mut self.store, page).map_err(|e| e.into())
+        } else {
+            Err(error::Error::NotSupported(error::AffectedFunction::Popular))
+        }
     }
 
     pub fn popular(&mut self, page: i32) -> crate::error::Result<Vec<BasicNovel>> {
-        if self.functions.popular.is_none() {
-            return Err(error::Error::NotSupported(error::AffectedFunction::Popular));
-        }
-
-        let offset = self
-            .functions
-            .popular
-            .unwrap()
-            .call(&mut self.store, page)?;
-
+        let offset = self.call_popular(page)?;
         self.parse_result::<Vec<BasicNovel>, QuelleError>(offset)
     }
 
