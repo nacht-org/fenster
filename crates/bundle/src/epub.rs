@@ -6,10 +6,10 @@ use std::{
 };
 
 use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
-use quelle_core::prelude::*;
 use indoc::formatdoc;
 use itertools::Itertools;
 use log::{info, warn};
+use quelle_core::prelude::*;
 
 use crate::data::{Bundle, CoverData};
 
