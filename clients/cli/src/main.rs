@@ -5,7 +5,7 @@ mod lock;
 
 use std::{
     fs::{self, File},
-    io::{BufReader, BufWriter},
+    io::BufWriter,
     path::{Path, PathBuf},
     process::exit,
     time::Duration,
@@ -98,8 +98,7 @@ fn main() -> anyhow::Result<()> {
 fn run(cli: Cli) -> anyhow::Result<()> {
     match cli.command {
         Commands::Detect { url } => {
-            let file = File::open(cli.lock_file)?;
-            let lock: Lock = serde_json::from_reader(BufReader::new(file))?;
+            let lock = Lock::open(&cli.lock_file)?;
 
             let extension = lock
                 .extensions
@@ -115,6 +114,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         Commands::Lock { dir } => {
             let lock = Lock::generate(&dir)?;
             lock.save(&cli.lock_file)?;
+            info!("Saved lock file to '{}'", cli.lock_file.display());
         }
         Commands::Download {
             url,

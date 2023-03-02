@@ -7,8 +7,8 @@ use std::{
 };
 
 use anyhow::{anyhow, bail, Context};
-use quelle_engine::Runner;
 use log::{debug, info};
+use quelle_engine::Runner;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -83,7 +83,6 @@ impl Lock {
             extensions,
         };
 
-        info!("generated lock file at 'dist/lock.json'");
         Ok(lock)
     }
 
