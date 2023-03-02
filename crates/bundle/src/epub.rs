@@ -6,12 +6,12 @@ use std::{
 };
 
 use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
-use quelle_core::prelude::*;
 use indoc::formatdoc;
 use itertools::Itertools;
 use log::{info, warn};
+use quelle_core::prelude::*;
 
-use crate::data::{Bundle, CoverData};
+use crate::data::{Bundle, Cover};
 
 pub fn bundle_epub(
     bundle: Bundle,
@@ -110,7 +110,7 @@ pub fn empty_content(chapter: &Chapter) -> String {
 
 fn set_cover_image(
     builder: &mut EpubBuilder<ZipLibrary>,
-    cover: &CoverData,
+    cover: &Cover,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if cover.path.exists() {
         let file = File::open(&cover.path)?;
