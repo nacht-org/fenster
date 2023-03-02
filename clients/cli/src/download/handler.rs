@@ -8,7 +8,7 @@ use std::{
 
 use anyhow::bail;
 use log::info;
-use quelle_core::prelude::{Chapter, Meta, Novel};
+use quelle_core::prelude::{Chapter, Meta};
 use quelle_engine::Runner;
 use quelle_persist::{CoverLoc, Persist, PersistNovel, SavedNovel};
 use reqwest::{blocking::Client, header::CONTENT_TYPE};
@@ -32,13 +32,6 @@ pub struct DownloadHandler<'a> {
 
 pub const LOG_FILENAME: &'static str = "log.jsonl";
 
-fn get_novel_dir(root: &Path, meta: &Meta, novel: &Novel) -> PathBuf {
-    let mut save_dir = root.to_path_buf();
-    save_dir.push(&meta.id);
-    save_dir.push(slug::slugify(&novel.title));
-    save_dir
-}
-
 fn get_chapters_dir(root: &Path) -> PathBuf {
     root.join("chapters")
 }
@@ -56,15 +49,10 @@ impl<'a> DownloadHandler<'a> {
         let novel = runner.fetch_novel(url.as_str())?;
         let meta = runner.meta()?;
 
-        let save_dir = get_novel_dir(&options.dir, &meta, &novel);
-        if !save_dir.exists() {
-            fs::create_dir_all(&save_dir)?;
-        }
-
         let persist_novel = persist.persist_novel(persist.novel_path(&meta, &novel.title));
         let data = persist_novel.read_data()?.unwrap_or(SavedNovel::new(novel));
 
-        let log_path = save_dir.join(LOG_FILENAME);
+        let log_path = persist_novel.dir().join(LOG_FILENAME);
         let log = DownloadLog::open(log_path)?;
 
         Ok(Self {
