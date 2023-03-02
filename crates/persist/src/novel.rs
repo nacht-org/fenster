@@ -91,6 +91,15 @@ impl<'a> PersistNovel<'a> {
     pub fn relative_path(&self, path: PathBuf) -> PathBuf {
         pathdiff::diff_paths(&path, &self.dir).unwrap_or(path)
     }
+
+    pub fn cover_path(&self, file_type: Option<&str>) -> PathBuf {
+        let name = match file_type {
+            Some(s) => format!("cover.{s}"),
+            None => String::from("cover"),
+        };
+
+        self.dir.join(name)
+    }
 }
 
 impl SavedNovel {
@@ -100,6 +109,13 @@ impl SavedNovel {
             cover: None,
             downloaded: Default::default(),
             updated_at: Utc::now(),
+        }
+    }
+
+    pub fn is_cover_downloaded(&self) -> bool {
+        match &self.cover {
+            Some(cover) => cover.path.exists() && cover.path.is_file(),
+            None => false,
         }
     }
 }

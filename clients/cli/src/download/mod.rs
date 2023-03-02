@@ -28,7 +28,7 @@ pub fn download(
 
     match &handler.options.cover {
         CoverAction::Dynamic => {
-            if !handler.is_cover_downloaded() {
+            if !handler.data.is_cover_downloaded() {
                 download_cover_and_warn(&mut handler)?;
             }
         }

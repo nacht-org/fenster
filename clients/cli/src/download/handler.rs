@@ -154,12 +154,6 @@ impl<'a> DownloadHandler<'a> {
         Ok(())
     }
 
-    pub fn is_cover_downloaded(&self) -> bool {
-        let cover = &self.data.cover;
-        let Some(cover) = cover else { return false };
-        return cover.path.exists() && cover.path.is_file();
-    }
-
     pub fn download_cover(&mut self) -> anyhow::Result<()> {
         let data = &mut self.data;
         let Some(url) = data.novel.cover.as_ref() else { return Ok(()) };
@@ -189,12 +183,7 @@ impl<'a> DownloadHandler<'a> {
         info!("Content type from headers: {content_type}");
 
         let suffix = mime_guess::get_mime_extensions_str(&content_type).map(|exts| exts[0]);
-        let file_name = match suffix {
-            Some(suffix) => format!("cover.{suffix}"),
-            None => String::from("cover"),
-        };
-
-        let path = self.persist_novel.dir().join(file_name);
+        let path = self.persist_novel.cover_path(suffix);
 
         let mut file = BufWriter::new(File::create(&path)?);
         response.copy_to(&mut file)?;
