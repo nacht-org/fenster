@@ -6,7 +6,7 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
-use quelle_core::prelude::Novel;
+use quelle_core::prelude::{Chapter, Novel};
 use serde::{Deserialize, Serialize};
 
 use crate::{error::PersistResult, Persist};
@@ -72,6 +72,24 @@ impl<'a> PersistNovel<'a> {
         serde_json::to_writer(writer, data)?;
 
         Ok(())
+    }
+
+    #[inline]
+    pub fn chapters_dir(&self) -> PathBuf {
+        self.dir.join("chapters")
+    }
+
+    /// Directory should exist
+    pub fn save_chapter(&self, chapter: &Chapter, content: String) -> PersistResult<PathBuf> {
+        let name = format!("{}.html", chapter.index);
+        let path = self.chapters_dir().join(name);
+
+        fs::write(&path, content)?;
+        Ok(path)
+    }
+
+    pub fn relative_path(&self, path: PathBuf) -> PathBuf {
+        pathdiff::diff_paths(&path, &self.dir).unwrap_or(path)
     }
 }
 

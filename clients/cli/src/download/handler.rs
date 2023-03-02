@@ -32,10 +32,6 @@ pub struct DownloadHandler<'a> {
 
 pub const LOG_FILENAME: &'static str = "log.jsonl";
 
-fn get_chapters_dir(root: &Path) -> PathBuf {
-    root.join("chapters")
-}
-
 impl<'a> DownloadHandler<'a> {
     pub fn new(
         persist: &'a Persist,
@@ -92,7 +88,7 @@ impl<'a> DownloadHandler<'a> {
     }
 
     pub fn download(&mut self) -> anyhow::Result<()> {
-        let chapter_dir = get_chapters_dir(&self.persist_novel.dir().join("chapters"));
+        let chapter_dir = self.persist_novel.chapters_dir();
         if !chapter_dir.exists() {
             fs::create_dir_all(&chapter_dir)?;
         }
@@ -112,9 +108,9 @@ impl<'a> DownloadHandler<'a> {
 
         Self::download_chapters(
             &mut self.runner,
+            &self.persist_novel,
             &self.data,
             &mut self.log,
-            &chapter_dir,
             &chapters,
             self.persist_novel.dir(),
             &self.options,
@@ -125,9 +121,9 @@ impl<'a> DownloadHandler<'a> {
 
     fn download_chapters(
         runner: &mut Runner,
+        persist_novel: &PersistNovel<'a>,
         data: &SavedNovel,
         log: &mut DownloadLog,
-        chapter_dir: &Path,
         chapters: &[&Chapter],
         save_dir: &Path,
         options: &DownloadOptions,
@@ -144,15 +140,14 @@ impl<'a> DownloadHandler<'a> {
             }
 
             let content = runner.fetch_chapter_content(&chapter.url)?;
-            let filename = format!("{}.html", chapter.index);
-            let path = chapter_dir.join(&filename);
-            fs::write(&path, content)?;
+            let path = persist_novel.save_chapter(chapter, content)?;
 
             info!("Downloaded '{}' to '{}'.", &chapter.title, path.display());
 
+            let path = persist_novel.relative_path(path);
             log.push_event(EventKind::Downloaded {
                 url: chapter.url.clone(),
-                path: Path::new("chapters").join(&filename),
+                path,
             })?;
         }
 
