@@ -1,32 +1,30 @@
 use quelle_core::prelude::Meta;
-use std::{fs::File, io::BufReader, path::PathBuf};
+use std::{
+    fs::{self, File, OpenOptions},
+    io::{BufReader, BufWriter},
+    path::PathBuf,
+};
 
 use crate::{error::PersistResult, global::Global, novel::PersistNovel, PersistOptions};
 
 #[derive(Debug)]
 pub struct Persist {
-    pub meta: Meta,
     pub options: PersistOptions,
 }
 
 impl Persist {
-    pub fn new(meta: Meta, options: PersistOptions) -> Self {
-        Persist { meta, options }
+    pub fn new(options: PersistOptions) -> Self {
+        Persist { options }
     }
 
     pub fn persist_novel<'a>(&'a self, dir: PathBuf) -> PersistNovel<'a> {
         PersistNovel::new(dir, self)
     }
 
-    pub fn novel_path(&self, global: &Global, url: &str, title: &str) -> PathBuf {
-        match global.novel_path_by_url(url) {
-            Some(path) => path.clone(),
-            None => {
-                let mut path = self.options.novel.dir.join(&self.meta.id);
-                path.push(slug::slugify(title));
-                path
-            }
-        }
+    pub fn novel_path(&self, meta: &Meta, title: &str) -> PathBuf {
+        let mut path = self.options.novel.dir.join(&meta.id);
+        path.push(slug::slugify(title));
+        path
     }
 
     pub fn global(&self) -> PersistResult<Global> {
@@ -39,5 +37,26 @@ impl Persist {
         };
 
         Ok(data)
+    }
+
+    pub fn save_global(&self, global: &Global) -> PersistResult<()> {
+        let path = self.options.global_path.as_path();
+
+        if let Some(parent) = path.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent)?;
+            }
+        }
+
+        let file = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(path)?;
+
+        let writer = BufWriter::new(file);
+        serde_json::to_writer(writer, &global)?;
+
+        Ok(())
     }
 }

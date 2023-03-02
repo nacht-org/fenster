@@ -17,15 +17,15 @@ pub struct PersistNovel<'a> {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct NovelData {
+pub struct SavedNovel {
     pub novel: Novel,
-    pub cover: Option<CoverData>,
+    pub cover: Option<CoverLoc>,
     pub downloaded: HashMap<String, PathBuf>,
     pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct CoverData {
+pub struct CoverLoc {
     pub path: PathBuf,
     pub content_type: String,
 }
@@ -39,7 +39,7 @@ impl<'a> PersistNovel<'a> {
         &self.dir
     }
 
-    pub fn read_data(self) -> PersistResult<Option<NovelData>> {
+    pub fn read_data(&self) -> PersistResult<Option<SavedNovel>> {
         let path = self.persist.options.novel.file_path();
 
         let data = if path.exists() {
@@ -53,7 +53,7 @@ impl<'a> PersistNovel<'a> {
         Ok(data)
     }
 
-    pub fn write_data(self, data: &NovelData) -> PersistResult<()> {
+    pub fn write_data(&self, data: &SavedNovel) -> PersistResult<()> {
         let path = self.persist.options.novel.file_path();
 
         if let Some(parent) = path.parent() {
@@ -75,10 +75,10 @@ impl<'a> PersistNovel<'a> {
     }
 }
 
-impl From<Novel> for NovelData {
-    fn from(value: Novel) -> Self {
-        NovelData {
-            novel: value,
+impl SavedNovel {
+    pub fn new(novel: Novel) -> Self {
+        Self {
+            novel,
             cover: None,
             downloaded: Default::default(),
             updated_at: Utc::now(),

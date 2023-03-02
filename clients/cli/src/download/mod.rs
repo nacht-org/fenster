@@ -1,29 +1,29 @@
+mod event;
 mod handler;
 mod options;
 
 use std::path::PathBuf;
 
-pub use handler::{DATA_FILENAME, LOG_FILENAME};
+pub use handler::LOG_FILENAME;
 use log::warn;
 pub use options::DownloadOptions;
+use quelle_persist::{Persist, SavedNovel};
 use url::Url;
 
-use crate::{
-    args::CoverAction,
-    data::{GlobalTracker, NovelTracking},
-};
+use crate::args::CoverAction;
 
 use self::handler::DownloadHandler;
 
 pub fn download(
+    persist: Persist,
     url: Url,
     wasm_path: PathBuf,
     options: DownloadOptions,
-) -> anyhow::Result<NovelTracking> {
-    let mut global = GlobalTracker::in_dir(&options.dir)?;
+) -> anyhow::Result<SavedNovel> {
+    let mut global = persist.global()?;
 
     let url_string = url.to_string();
-    let mut handler = DownloadHandler::new(url, wasm_path, options)?;
+    let mut handler = DownloadHandler::new(&persist, url, wasm_path, options)?;
     handler.save()?;
 
     match &handler.options.cover {
@@ -36,15 +36,13 @@ pub fn download(
         CoverAction::Ignore => (),
     }
 
-    global
-        .data
-        .insert_novel(url_string, handler.save_dir.clone());
-    global.save()?;
+    global.insert_novel(url_string, handler.persist_novel.dir().to_path_buf());
+    persist.save_global(&global)?;
 
     handler.download()?;
     handler.save()?;
 
-    Ok(handler.tracking)
+    Ok(handler.data)
 }
 
 fn download_cover_and_warn(handler: &mut DownloadHandler) -> Result<(), anyhow::Error> {

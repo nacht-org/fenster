@@ -8,26 +8,28 @@ use std::{
 
 use anyhow::bail;
 use log::info;
-use quelle_bundle::CoverData;
 use quelle_core::prelude::{Chapter, Meta, Novel};
 use quelle_engine::Runner;
+use quelle_persist::{CoverLoc, Persist, PersistNovel, SavedNovel};
 use reqwest::{blocking::Client, header::CONTENT_TYPE};
 use url::Url;
 
-use crate::data::{DownloadLog, EventKind, NovelTracking};
+use crate::download::event::EventKind;
 
-use super::DownloadOptions;
+use super::{
+    event::{DownloadLog, LogEvent},
+    DownloadOptions,
+};
 
-pub struct DownloadHandler {
+pub struct DownloadHandler<'a> {
     pub runner: Runner,
     pub meta: Meta,
-    pub save_dir: PathBuf,
-    pub log: DownloadLog,
-    pub tracking: NovelTracking,
+    pub persist_novel: PersistNovel<'a>,
+    pub data: SavedNovel,
     pub options: DownloadOptions,
+    pub log: DownloadLog,
 }
 
-pub const DATA_FILENAME: &'static str = "data.json";
 pub const LOG_FILENAME: &'static str = "log.jsonl";
 
 fn get_novel_dir(root: &Path, meta: &Meta, novel: &Novel) -> PathBuf {
@@ -41,8 +43,13 @@ fn get_chapters_dir(root: &Path) -> PathBuf {
     root.join("chapters")
 }
 
-impl DownloadHandler {
-    pub fn new(url: Url, wasm_path: PathBuf, options: DownloadOptions) -> anyhow::Result<Self> {
+impl<'a> DownloadHandler<'a> {
+    pub fn new(
+        persist: &'a Persist,
+        url: Url,
+        wasm_path: PathBuf,
+        options: DownloadOptions,
+    ) -> anyhow::Result<Self> {
         let mut runner = Runner::new(&wasm_path)?;
         runner.setup()?;
 
@@ -54,8 +61,8 @@ impl DownloadHandler {
             fs::create_dir_all(&save_dir)?;
         }
 
-        let tracking_path = save_dir.join(DATA_FILENAME);
-        let tracking = NovelTracking::new(novel, tracking_path)?;
+        let persist_novel = persist.persist_novel(persist.novel_path(&meta, &novel.title));
+        let data = persist_novel.read_data()?.unwrap_or(SavedNovel::new(novel));
 
         let log_path = save_dir.join(LOG_FILENAME);
         let log = DownloadLog::open(log_path)?;
@@ -63,8 +70,8 @@ impl DownloadHandler {
         Ok(Self {
             runner,
             meta,
-            save_dir,
-            tracking,
+            persist_novel,
+            data,
             log,
             options,
         })
@@ -74,26 +81,35 @@ impl DownloadHandler {
         // Commit and clear events
         if !self.log.events.is_empty() {
             let events = mem::take(&mut self.log.events);
-            self.tracking.commit_events(events);
+            self.commit_events(events);
         }
 
         if self.log.written {
             self.log = DownloadLog::new(mem::take(&mut self.log.path), vec![])?;
         }
 
-        self.tracking.save()?;
+        self.persist_novel.write_data(&self.data)?;
 
         Ok(())
     }
 
+    fn commit_events(&mut self, events: Vec<LogEvent>) {
+        for event in events {
+            match event.kind {
+                EventKind::Downloaded { url, path } => {
+                    self.data.downloaded.insert(url, path);
+                }
+            }
+        }
+    }
+
     pub fn download(&mut self) -> anyhow::Result<()> {
-        let chapter_dir = get_chapters_dir(&self.save_dir);
+        let chapter_dir = get_chapters_dir(&self.persist_novel.dir().join("chapters"));
         if !chapter_dir.exists() {
             fs::create_dir_all(&chapter_dir)?;
         }
 
         let chapters = self
-            .tracking
             .data
             .novel
             .volumes
@@ -108,11 +124,11 @@ impl DownloadHandler {
 
         Self::download_chapters(
             &mut self.runner,
-            &self.tracking,
+            &self.data,
             &mut self.log,
             &chapter_dir,
             &chapters,
-            &self.save_dir,
+            self.persist_novel.dir(),
             &self.options,
         )?;
 
@@ -121,7 +137,7 @@ impl DownloadHandler {
 
     fn download_chapters(
         runner: &mut Runner,
-        tracking: &NovelTracking,
+        data: &SavedNovel,
         log: &mut DownloadLog,
         chapter_dir: &Path,
         chapters: &[&Chapter],
@@ -129,7 +145,7 @@ impl DownloadHandler {
         options: &DownloadOptions,
     ) -> anyhow::Result<()> {
         for chapter in chapters {
-            if let Some(path) = tracking.data.downloaded.get(&chapter.url) {
+            if let Some(path) = data.downloaded.get(&chapter.url) {
                 if save_dir.join(path).exists() {
                     continue;
                 }
@@ -156,13 +172,13 @@ impl DownloadHandler {
     }
 
     pub fn is_cover_downloaded(&self) -> bool {
-        let cover = &self.tracking.data.cover;
+        let cover = &self.data.cover;
         let Some(cover) = cover else { return false };
         return cover.path.exists() && cover.path.is_file();
     }
 
     pub fn download_cover(&mut self) -> anyhow::Result<()> {
-        let data = &mut self.tracking.data;
+        let data = &mut self.data;
         let Some(url) = data.novel.cover.as_ref() else { return Ok(()) };
 
         let client = Client::builder()
@@ -195,13 +211,13 @@ impl DownloadHandler {
             None => String::from("cover"),
         };
 
-        let path = self.save_dir.join(file_name);
+        let path = self.persist_novel.dir().join(file_name);
 
         let mut file = BufWriter::new(File::create(&path)?);
         response.copy_to(&mut file)?;
 
         info!("Saved novel cover to '{}'.", path.display());
-        data.cover = Some(CoverData { path, content_type });
+        data.cover = Some(CoverLoc { path, content_type });
 
         Ok(())
     }

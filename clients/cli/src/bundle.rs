@@ -2,19 +2,18 @@ use std::{fs::File, io::BufWriter, path::Path};
 
 use quelle_bundle::Bundle;
 use quelle_core::prelude::*;
-
-use crate::data::TrackingData;
+use quelle_persist::SavedNovel;
 
 pub fn compile_epub(
     meta: Option<Meta>,
-    data: TrackingData,
+    data: SavedNovel,
     base_path: &Path,
     out: &mut BufWriter<File>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let bundle = Bundle {
         meta,
         novel: data.novel,
-        cover: data.cover,
+        cover: data.cover.map(Into::into),
         chapter_content: data.downloaded,
     };
 

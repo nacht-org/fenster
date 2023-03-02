@@ -1,6 +1,5 @@
 mod args;
 mod bundle;
-mod data;
 mod download;
 mod lock;
 
@@ -12,14 +11,14 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{anyhow, bail, Context};
+use anyhow::{anyhow, bail};
 use args::{CoverAction, DownloadRange};
 use clap::{Parser, Subcommand};
-use data::{GlobalTracker, NovelTracking};
 use download::DownloadOptions;
-use quelle_engine::Runner;
 use lock::Lock;
 use log::{info, warn};
+use quelle_engine::Runner;
+use quelle_persist::{Persist, PersistOptions};
 use simplelog::{Config, LevelFilter, TermLogger};
 use url::Url;
 
@@ -123,6 +122,8 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             delay,
             cover,
         } => {
+            let persist = Persist::new(PersistOptions::default());
+
             let lock = Lock::open(&cli.lock_file)?;
             let Some(extension) = lock.detect(url.as_str())? else {
                 println!("supported source not found.");
@@ -136,16 +137,16 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 cover,
             };
 
-            download::download(url, PathBuf::from(&extension.path), options)?;
+            download::download(persist, url, PathBuf::from(&extension.path), options)?;
         }
         Commands::Bundle { url } => {
-            let global = GlobalTracker::in_dir(&cli.data_dir)?;
+            let persist = Persist::new(PersistOptions::default());
+            let global = persist.global()?;
             info!("Loaded global data");
 
             let path = global
-                .data
-                .get_path_for_url(&url.to_string())
-                .with_context(|| "The novel does not exist")?;
+                .novel_path_by_url(&url.to_string())
+                .ok_or(anyhow!("The novel does not exist"))?;
 
             info!("Found novel data at '{}'.", path.display());
 
@@ -158,7 +159,6 @@ fn run(cli: Cli) -> anyhow::Result<()> {
 
                 let mut runner = Runner::new(path)?;
                 let meta = runner.meta()?;
-
                 info!("Acquired source meta information from wasm file.");
 
                 Ok(meta)
@@ -172,7 +172,8 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 }
             };
 
-            let data = NovelTracking::open(path.join(download::DATA_FILENAME))?.data;
+            let novel = persist.persist_novel(path.into());
+            let data = novel.read_data()?.ok_or(anyhow!("novel data not found"))?;
 
             info!("Loaded novel information from disk");
 
