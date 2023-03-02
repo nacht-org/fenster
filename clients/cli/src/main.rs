@@ -141,7 +141,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         }
         Commands::Bundle { url } => {
             let persist = Persist::new(PersistOptions::default());
-            let global = persist.global()?;
+            let global = persist.read_global()?;
             info!("Loaded global data");
 
             let path = global

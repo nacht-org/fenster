@@ -27,7 +27,7 @@ impl Persist {
         path
     }
 
-    pub fn global(&self) -> PersistResult<Global> {
+    pub fn read_global(&self) -> PersistResult<Global> {
         let data = if self.options.global_path.exists() {
             let file = File::open(&self.options.global_path)?;
             let reader = BufReader::new(file);

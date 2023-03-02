@@ -20,7 +20,7 @@ pub fn download(
     wasm_path: PathBuf,
     options: DownloadOptions,
 ) -> anyhow::Result<SavedNovel> {
-    let mut global = persist.global()?;
+    let mut global = persist.read_global()?;
 
     let url_string = url.to_string();
     let mut handler = DownloadHandler::new(&persist, url, wasm_path, options)?;
