@@ -9,8 +9,9 @@ use chrono::{DateTime, Utc};
 use quelle_core::prelude::{Chapter, Novel};
 use serde::{Deserialize, Serialize};
 
-use crate::{error::PersistResult, Persist};
+use crate::{error::PersistResult, event::EventLog, Event, EventKind, Persist};
 
+#[derive(Debug)]
 pub struct PersistNovel<'a> {
     dir: PathBuf,
     persist: &'a Persist,
@@ -33,6 +34,11 @@ pub struct CoverLoc {
 impl<'a> PersistNovel<'a> {
     pub fn new(dir: PathBuf, persist: &'a Persist) -> Self {
         PersistNovel { dir, persist }
+    }
+
+    pub fn event_log(&self) -> PersistResult<EventLog> {
+        let path = self.dir.join(&self.persist.options.novel.events);
+        EventLog::new(path)
     }
 
     pub fn dir(&self) -> &Path {
@@ -116,6 +122,16 @@ impl SavedNovel {
         match &self.cover {
             Some(cover) => cover.path.exists() && cover.path.is_file(),
             None => false,
+        }
+    }
+
+    pub fn commit_events(&mut self, events: Vec<Event>) {
+        for event in events {
+            match event.kind {
+                EventKind::Downloaded { url, path } => {
+                    self.downloaded.insert(url, path);
+                }
+            }
         }
     }
 }

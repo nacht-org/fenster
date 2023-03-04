@@ -1,7 +1,6 @@
 use std::{
     fs::{self, File},
     io::BufWriter,
-    mem,
     path::{Path, PathBuf},
     thread,
 };
@@ -10,16 +9,11 @@ use anyhow::bail;
 use log::info;
 use quelle_core::prelude::{Chapter, Meta};
 use quelle_engine::Runner;
-use quelle_persist::{CoverLoc, Persist, PersistNovel, SavedNovel};
+use quelle_persist::{CoverLoc, EventKind, EventLog, Persist, PersistNovel, SavedNovel};
 use reqwest::{blocking::Client, header::CONTENT_TYPE};
 use url::Url;
 
-use crate::download::event::EventKind;
-
-use super::{
-    event::{DownloadLog, LogEvent},
-    DownloadOptions,
-};
+use super::DownloadOptions;
 
 pub struct DownloadHandler<'a> {
     pub runner: Runner,
@@ -27,10 +21,8 @@ pub struct DownloadHandler<'a> {
     pub persist_novel: PersistNovel<'a>,
     pub data: SavedNovel,
     pub options: DownloadOptions,
-    pub log: DownloadLog,
+    pub log: EventLog,
 }
-
-pub const LOG_FILENAME: &'static str = "log.jsonl";
 
 impl<'a> DownloadHandler<'a> {
     pub fn new(
@@ -48,8 +40,7 @@ impl<'a> DownloadHandler<'a> {
         let persist_novel = persist.persist_novel(persist.novel_path(&meta, &novel.title));
         let data = persist_novel.read_data()?.unwrap_or(SavedNovel::new(novel));
 
-        let log_path = persist_novel.dir().join(LOG_FILENAME);
-        let log = DownloadLog::open(log_path)?;
+        let log = persist_novel.event_log()?;
 
         Ok(Self {
             runner,
@@ -62,29 +53,12 @@ impl<'a> DownloadHandler<'a> {
     }
 
     pub fn save(&mut self) -> anyhow::Result<()> {
-        // Commit and clear events
-        if !self.log.events.is_empty() {
-            let events = mem::take(&mut self.log.events);
-            self.commit_events(events);
-        }
-
-        if self.log.written {
-            self.log = DownloadLog::new(mem::take(&mut self.log.path), vec![])?;
+        if let Some(events) = self.log.take_events() {
+            self.data.commit_events(events);
         }
 
         self.persist_novel.write_data(&self.data)?;
-
         Ok(())
-    }
-
-    fn commit_events(&mut self, events: Vec<LogEvent>) {
-        for event in events {
-            match event.kind {
-                EventKind::Downloaded { url, path } => {
-                    self.data.downloaded.insert(url, path);
-                }
-            }
-        }
     }
 
     pub fn download(&mut self) -> anyhow::Result<()> {
@@ -123,7 +97,7 @@ impl<'a> DownloadHandler<'a> {
         runner: &mut Runner,
         persist_novel: &PersistNovel<'a>,
         data: &SavedNovel,
-        log: &mut DownloadLog,
+        log: &mut EventLog,
         chapters: &[&Chapter],
         save_dir: &Path,
         options: &DownloadOptions,

@@ -1,10 +1,8 @@
-mod event;
 mod handler;
 mod options;
 
 use std::path::PathBuf;
 
-pub use handler::LOG_FILENAME;
 use log::warn;
 pub use options::DownloadOptions;
 use quelle_persist::{Persist, SavedNovel};

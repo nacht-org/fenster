@@ -11,6 +11,7 @@ pub struct PersistOptions {
 pub struct NovelOptions {
     pub dir: PathBuf,
     pub filename: PathBuf,
+    pub events: PathBuf,
 }
 
 impl PersistOptions {
@@ -28,6 +29,7 @@ impl Default for PersistOptions {
             novel: NovelOptions {
                 dir: base_dir.join("novels"),
                 filename: PathBuf::from("novel.json"),
+                events: PathBuf::from("log.jsonl"),
             },
             base_dir,
         }
