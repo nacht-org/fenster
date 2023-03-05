@@ -2,6 +2,7 @@ use quelle_core::prelude::*;
 
 use crate::prelude::{FromWasmAbi, ToWasmAbi};
 
+#[link(name = "http")]
 extern "C" {
     fn ext_send_request(ptr: *mut u8) -> *mut u8;
 }

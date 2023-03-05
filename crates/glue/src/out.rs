@@ -5,6 +5,7 @@ use std::{
 
 use crate::prelude::ToWasmAbi;
 
+#[link(name = "io")]
 extern "C" {
     fn ext_print(ptr: *const u8);
     fn ext_eprint(ptr: *const u8);
