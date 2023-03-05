@@ -5,15 +5,19 @@ use wasmtime::{AsContext, AsContextMut, Caller, Memory};
 
 use crate::Data;
 
-pub fn read_string<'c, 'm>(
+pub fn read_str<'c, 'm>(caller: &'c mut Caller<'_, Data>, memory: &'m Memory, ptr: i32) -> &'m str {
+    let len = stack_pop(caller) as usize;
+    debug!("retrieved byte length from stack: {len}");
+    read_str_with_len(caller, memory, ptr, len)
+}
+
+pub fn read_str_with_len<'c, 'm>(
     caller: &'c mut Caller<'_, Data>,
     memory: &'m Memory,
     ptr: i32,
+    len: usize,
 ) -> &'m str {
-    info!("reading string from wasm memory");
-
-    let len = stack_pop(caller) as usize;
-    debug!("retrieved byte length from stack: {len}");
+    info!("reading string from wasm memory of len: {len}");
 
     unsafe {
         let ptr = memory.data_ptr(&caller).offset(ptr as isize);
@@ -22,11 +26,7 @@ pub fn read_string<'c, 'm>(
     }
 }
 
-pub fn write_string<'c, 'm>(
-    caller: &'c mut Caller<'_, Data>,
-    memory: &'m Memory,
-    value: &str,
-) -> i32 {
+pub fn write_str<'c, 'm>(caller: &'c mut Caller<'_, Data>, memory: &'m Memory, value: &str) -> i32 {
     let alloc_func = caller.get_export("alloc").unwrap().into_func().unwrap();
 
     let ptr = alloc_func

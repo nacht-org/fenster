@@ -2,9 +2,8 @@ use quelle_core::prelude::*;
 
 use crate::prelude::{FromWasmAbi, ToWasmAbi};
 
-#[link(name = "http")]
 extern "C" {
-    fn ext_send_request(ptr: *mut u8) -> *mut u8;
+    fn http_send_request(ptr: *mut u8) -> *mut u8;
 }
 
 pub fn send_request(request: Request) -> Result<Response, BoxedRequestError> {
@@ -15,7 +14,7 @@ pub fn send_request(request: Request) -> Result<Response, BoxedRequestError> {
     })?;
 
     let resp = unsafe {
-        let ptr = ext_send_request(req.to_wasm_abi());
+        let ptr = http_send_request(req.to_wasm_abi());
         let resp = String::from_wasm_abi(ptr);
 
         println!("{resp}");

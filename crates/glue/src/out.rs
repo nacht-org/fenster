@@ -3,26 +3,23 @@ use std::{
     panic,
 };
 
-use crate::prelude::ToWasmAbi;
-
-#[link(name = "io")]
 extern "C" {
-    fn ext_print(ptr: *const u8);
-    fn ext_eprint(ptr: *const u8);
-    fn ext_trace(ptr: *const u8);
+    fn io_print(ptr: *const u8, len: usize);
+    fn io_eprint(ptr: *const u8, len: usize);
+    fn io_trace(ptr: *const u8, len: usize);
 }
 
 #[inline]
 fn _print(buf: &str) {
     unsafe {
-        ext_print(buf.to_wasm_abi());
+        io_print(buf.as_ptr(), buf.len());
     }
 }
 
 #[inline]
 fn _eprint(buf: &str) {
     unsafe {
-        ext_eprint(buf.to_wasm_abi());
+        io_eprint(buf.as_ptr(), buf.len());
     }
 }
 
@@ -85,7 +82,7 @@ pub fn set_panic_hook() {
         let err_info = format!("Panicked at '{}', {}:{}:{}", msg, file, line, col);
 
         unsafe {
-            ext_trace(err_info.as_str().to_wasm_abi());
+            io_trace(err_info.as_ptr(), err_info.len());
         }
     }));
 }

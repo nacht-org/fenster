@@ -5,7 +5,7 @@ use quelle_core::prelude::{Request, RequestError, RequestErrorKind, Response};
 use wasmtime::Caller;
 
 use crate::{
-    module::utils::{read_string, write_string},
+    module::utils::{read_str, write_str},
     Data,
 };
 
@@ -14,7 +14,7 @@ pub fn ext_send_request(mut caller: Caller<'_, Data>, ptr: i32) -> i32 {
 
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
 
-    let request = read_string(&mut caller, &memory, ptr);
+    let request = read_str(&mut caller, &memory, ptr);
     let request = serde_json::from_str::<Request>(request).unwrap();
     debug!("Sending http request: {request:?}.");
 
@@ -27,7 +27,7 @@ pub fn ext_send_request(mut caller: Caller<'_, Data>, ptr: i32) -> i32 {
     let response = parse_response(response);
     let json = serde_json::to_string(&response).unwrap();
 
-    write_string(&mut caller, &memory, json.as_str())
+    write_str(&mut caller, &memory, json.as_str())
 }
 
 fn parse_response(
