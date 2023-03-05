@@ -42,20 +42,18 @@ pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
         ..Default::default()
     };
 
-    let author = doc.select_first("span[property='name']").get_text()?;
+    let author = doc.select_first(".fic-header h4 a").get_text()?;
 
     let novel = Novel {
-        title: doc.select_first("h1[property='name']").get_text()?,
+        title: doc.select_first(".fic-header h1").get_text()?,
         authors: vec![author],
         cover: doc
             .select_first(".page-content-inner .thumbnail")
             .get_attribute("src"),
-        description: doc
-            .select(r#".description > [property="description"] > p"#)
-            .collect_text(),
+        description: doc.select(r#".description > div > p"#).collect_text(),
         status: doc
-            .select_first(".widget_fic_similar > li:last-child > span:last-child")
-            .map(|node| node.text_contents().as_str().into())
+            .select_first(".fiction-info > .portlet.row span:nth-child(2)")
+            .map(|node| node.get_text().as_str().into())
             .unwrap_or_default(),
         langs: META.langs.clone(),
         volumes: vec![volume],
