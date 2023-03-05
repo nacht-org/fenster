@@ -1,140 +1,16 @@
 pub mod error;
+mod module;
 
 use error::Error;
-use log::{debug, info, trace};
+use log::info;
 use quelle_core::prelude::*;
 use reqwest::blocking::Client;
 use serde::de::DeserializeOwned;
-use std::{path::Path, slice, str::FromStr};
+use std::{path::Path, slice};
 use wasmtime::*;
 
 pub struct Data {
     client: Client,
-}
-
-pub fn ext_print(mut caller: Caller<'_, Data>, ptr: i32) {
-    trace!("executing exposed function 'ext_print'");
-
-    let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
-    let string = read_string(&mut caller, &memory, ptr);
-    print!("{string}");
-}
-
-pub fn ext_eprint(mut caller: Caller<'_, Data>, ptr: i32) {
-    trace!("executing exposed function 'ext_eprint'");
-
-    let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
-    let string = read_string(&mut caller, &memory, ptr);
-    eprint!("{string}");
-}
-
-pub fn ext_trace(mut caller: Caller<'_, Data>, ptr: i32) {
-    trace!("executing exposed function 'ext_trace'");
-
-    let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
-    let string = read_string(&mut caller, &memory, ptr);
-    eprintln!("{string}");
-}
-
-pub fn ext_send_request(mut caller: Caller<'_, Data>, ptr: i32) -> i32 {
-    trace!("executing exposed function 'ext_send_request'");
-
-    let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
-
-    let request = read_string(&mut caller, &memory, ptr);
-    let request = serde_json::from_str::<Request>(request).unwrap();
-    debug!("Sending http request: {request:?}.");
-
-    let client = &caller.data().client;
-    let response = client.execute(reqwest::blocking::Request::new(
-        reqwest::Method::GET,
-        reqwest::Url::from_str(&request.url).unwrap(),
-    ));
-
-    let response = parse_response(response);
-    let json = serde_json::to_string(&response).unwrap();
-
-    write_string(&mut caller, &memory, json.as_str())
-}
-
-fn parse_response(
-    response: reqwest::Result<reqwest::blocking::Response>,
-) -> Result<Response, RequestError> {
-    let response = response?;
-    let header_map = response
-        .headers()
-        .into_iter()
-        .map(|(n, v)| (n.to_string(), v.to_str().unwrap_or_default().to_string()))
-        .collect::<std::collections::HashMap<_, _>>();
-
-    let headers = serde_json::to_string(&header_map).map_err(|_| RequestError {
-        kind: RequestErrorKind::Serial,
-        url: Some(response.url().as_str().to_string()),
-        message: String::from("failed to serialize response"),
-    })?;
-
-    Ok(Response {
-        status: response.status().as_u16() as usize,
-        body: response.bytes().map(|data| data.to_vec()).ok(),
-        headers: Some(headers),
-    })
-}
-
-fn read_string<'c, 'm>(caller: &'c mut Caller<'_, Data>, memory: &'m Memory, ptr: i32) -> &'m str {
-    info!("reading string from wasm memory");
-
-    let len = stack_pop(caller) as usize;
-    debug!("retrieved byte length from stack: {len}");
-
-    unsafe {
-        let ptr = memory.data_ptr(&caller).offset(ptr as isize);
-        let bytes = slice::from_raw_parts(ptr, len);
-        std::str::from_utf8(bytes).unwrap()
-    }
-}
-
-fn write_string<'c, 'm>(caller: &'c mut Caller<'_, Data>, memory: &'m Memory, value: &str) -> i32 {
-    let alloc_func = caller.get_export("alloc").unwrap().into_func().unwrap();
-
-    let ptr = alloc_func
-        .typed::<i32, i32>(caller.as_context())
-        .unwrap()
-        .call(caller.as_context_mut(), value.len() as i32)
-        .unwrap();
-
-    stack_push(caller, value.len() as i32);
-
-    memory
-        .write(caller.as_context_mut(), ptr as usize, value.as_bytes())
-        .unwrap();
-
-    ptr
-}
-
-fn stack_push<'c, 'm>(caller: &'c mut Caller<'_, Data>, value: i32) {
-    let push_fn = caller
-        .get_export("stack_push")
-        .unwrap()
-        .into_func()
-        .unwrap();
-
-    push_fn
-        .typed::<i32, ()>(&caller)
-        .unwrap()
-        .call(caller, value)
-        .unwrap();
-}
-
-fn stack_pop<'c, 'm>(caller: &'c mut Caller<'_, Data>) -> i32 {
-    let pop_fn = caller.get_export("stack_pop").unwrap().into_func().unwrap();
-
-    let value = pop_fn
-        .typed::<(), i32>(&caller)
-        .unwrap()
-        .call(caller, ())
-        .unwrap();
-
-    value
 }
 
 #[allow(dead_code)]
@@ -175,10 +51,10 @@ impl Runner {
         let mut linker: Linker<Data> = Linker::new(&engine);
         let module = Module::from_file(&engine, path)?;
 
-        linker.func_wrap("http", "ext_send_request", ext_send_request)?;
-        linker.func_wrap("io", "ext_print", ext_print)?;
-        linker.func_wrap("io", "ext_eprint", ext_eprint)?;
-        linker.func_wrap("io", "ext_trace", ext_trace)?;
+        linker.func_wrap("http", "ext_send_request", module::ext_send_request)?;
+        linker.func_wrap("io", "ext_print", module::ext_print)?;
+        linker.func_wrap("io", "ext_eprint", module::ext_eprint)?;
+        linker.func_wrap("io", "ext_trace", module::ext_trace)?;
 
         let data = Data {
             client: Client::builder()
