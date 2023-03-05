@@ -6,7 +6,6 @@ use std::collections::HashMap;
 
 use chrono::NaiveDateTime;
 use kuchiki::{traits::TendrilSink, NodeRef};
-use once_cell::sync::Lazy;
 use quelle_core::prelude::*;
 use quelle_glue::prelude::*;
 

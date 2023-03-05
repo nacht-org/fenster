@@ -7,7 +7,6 @@ use kuchiki::{
     iter::{Descendants, Elements, Select},
     traits::TendrilSink,
 };
-use once_cell::sync::Lazy;
 use quelle_core::prelude::*;
 use quelle_glue::prelude::*;
 

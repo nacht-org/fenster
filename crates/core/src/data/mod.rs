@@ -17,6 +17,7 @@ pub enum ReadingDirection {
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Attribute {
     Fanfiction,
+    Mtl,
 }
 
 /// https://www.dublincore.org/specifications/dublin-core/dces/

@@ -12,6 +12,9 @@ pub enum QuelleError {
     #[error("{0}")]
     ParseFailed(#[from] ParseError),
 
+    #[error("failed to serialize or deserialize json data")]
+    JsonError,
+
     #[error("{0}")]
     WasmAbiError(String),
 }
