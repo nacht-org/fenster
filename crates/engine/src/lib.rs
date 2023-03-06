@@ -51,10 +51,10 @@ impl Runner {
         let mut linker: Linker<Data> = Linker::new(&engine);
         let module = Module::from_file(&engine, path)?;
 
-        linker.func_wrap("env", "http_send_request", module::ext_send_request)?;
-        linker.func_wrap("env", "io_print", module::ext_print)?;
-        linker.func_wrap("env", "io_eprint", module::ext_eprint)?;
-        linker.func_wrap("env", "io_trace", module::ext_trace)?;
+        linker.func_wrap("env", "http_send_request", module::http::send_request)?;
+        linker.func_wrap("env", "io_print", module::io::print)?;
+        linker.func_wrap("env", "io_eprint", module::io::eprint)?;
+        linker.func_wrap("env", "io_trace", module::io::trace)?;
 
         let data = Data {
             client: Client::builder()

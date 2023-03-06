@@ -9,7 +9,7 @@ use crate::{
     Data,
 };
 
-pub fn ext_send_request(mut caller: Caller<'_, Data>, ptr: i32) -> i32 {
+pub fn send_request(mut caller: Caller<'_, Data>, ptr: i32) -> i32 {
     trace!("executing exposed function 'ext_send_request'");
 
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
