@@ -104,3 +104,8 @@ fn collect_volumes(url: &str, doc: &NodeRef) -> Result<Vec<Volume>, QuelleError>
 
     Ok(vec![volume])
 }
+
+#[expose]
+pub fn fetch_chapter_content(url: String) -> Result<String, QuelleError> {
+    todo!()
+}
