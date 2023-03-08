@@ -5,12 +5,24 @@ import 'dart:io';
 ///
 /// Throws [QuelleLocatorError] if the dynamic library could not be found.
 DynamicLibrary loadDynamicLibrary() {
-  String locate(String libName) {
-    final dir = '$_quelleToolDir$libName';
-    final value = _packageRootUri(Platform.script.resolve('./')) ??
-        _packageRootUri(Directory.current.uri);
+  DynamicLibrary? locate(String libName) {
+    if (FileSystemEntity.isFileSync(libName)) {
+      return DynamicLibrary.open(libName);
+    }
+
+    final toolLib =
+        Directory.current.uri.resolve("$_quelleToolDir$libName").toFilePath();
+    if (FileSystemEntity.isFileSync(toolLib)) {
+      return DynamicLibrary.open(toolLib);
+    }
+
+    return null;
+  }
+
+  DynamicLibrary locateOrError(String libName) {
+    final value = locate(libName);
     if (value != null) {
-      return value.resolve(dir).toFilePath();
+      return value;
     } else {
       throw QuelleLocatorError(
         'Quelle library not found. Did you run `$invocationString`?',
@@ -21,11 +33,11 @@ DynamicLibrary loadDynamicLibrary() {
   if (Platform.isIOS) {
     return DynamicLibrary.process();
   } else if (Platform.isMacOS) {
-    return DynamicLibrary.open(locate(appleLib));
+    return locateOrError(appleLib);
   } else if (Platform.isWindows) {
-    return DynamicLibrary.open(locate(windowsLib));
+    return locate(windowsLib) ?? DynamicLibrary.executable();
   } else if (Platform.isLinux) {
-    return DynamicLibrary.open(locate(linuxLib));
+    return locateOrError(linuxLib);
   } else if (Platform.isAndroid) {
     return DynamicLibrary.open(linuxLib);
   } else if (Platform.isFuchsia) {
@@ -63,27 +75,4 @@ const linuxLib = 'libquelle.so';
 /// The expected name of the Quelle library when compiled for Windows devices.
 const windowsLib = 'quelle.dll';
 
-/// Returns the uri representing the target output directory of generated
-/// dynamic libraries.
-Uri libBuildOutDir(Uri root) {
-  final pkgRoot = _packageRootUri(root);
-  if (pkgRoot == null) {
-    throw ArgumentError('Could not find "$_pkgConfigFile" within "$root".');
-  }
-  return pkgRoot.resolve(_quelleToolDir);
-}
-
 const _quelleToolDir = '.dart_tool/quelle/';
-
-const _pkgConfigFile = '.dart_tool/package_config.json';
-
-Uri? _packageRootUri(Uri root) {
-  do {
-    if (FileSystemEntity.isFileSync(
-      root.resolve(_pkgConfigFile).toFilePath(),
-    )) {
-      return root;
-    }
-  } while (root != (root = root.resolve('..')));
-  return null;
-}
