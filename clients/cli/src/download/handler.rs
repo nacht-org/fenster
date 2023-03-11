@@ -60,6 +60,8 @@ impl<'a> DownloadHandler<'a> {
         }
 
         self.persist_novel.write_data(&self.data)?;
+        self.log.truncate()?;
+
         Ok(())
     }
 

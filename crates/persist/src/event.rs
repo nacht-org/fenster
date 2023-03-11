@@ -1,6 +1,6 @@
 use std::{
     fs::{self, File, OpenOptions},
-    io::{BufRead, BufReader, LineWriter, Write},
+    io::{self, BufRead, BufReader, LineWriter, Write},
     path::PathBuf,
 };
 
@@ -88,5 +88,16 @@ impl EventLog {
 
     pub fn take_events(&mut self) -> Option<Vec<Event>> {
         self.events.take()
+    }
+
+    pub fn truncate(&mut self) -> io::Result<()> {
+        let file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .truncate(true)
+            .open(&self.path)?;
+
+        self.file = LineWriter::new(file);
+        Ok(())
     }
 }
