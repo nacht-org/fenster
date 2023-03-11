@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use quelle_core::prelude::{Chapter, Novel};
 use serde::{Deserialize, Serialize};
 
-use crate::{error::PersistResult, event::EventLog, Event, EventKind, Persist};
+use crate::{error::PersistResult, event::EventLog, Event, EventKind, Persist, create_parent_all};
 
 #[derive(Debug)]
 pub struct PersistNovel<'a> {
@@ -65,12 +65,7 @@ impl<'a> PersistNovel<'a> {
 
     pub fn write_data(&self, data: &SavedNovel) -> PersistResult<()> {
         let path = self.data_path();
-
-        if let Some(parent) = path.parent() {
-            if !parent.exists() {
-                fs::create_dir_all(parent)?;
-            }
-        }
+        create_parent_all(&path)?;
 
         let file = OpenOptions::new()
             .create(true)

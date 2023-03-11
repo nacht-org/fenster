@@ -7,7 +7,7 @@ use std::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::error::PersistResult;
+use crate::{create_parent_all, error::PersistResult};
 
 #[derive(Debug)]
 pub struct EventLog {
@@ -29,11 +29,7 @@ pub enum EventKind {
 
 impl EventLog {
     pub fn new(path: PathBuf) -> PersistResult<Self> {
-        if let Some(parent) = path.parent() {
-            if !parent.exists() {
-                fs::create_dir_all(parent)?;
-            }
-        }
+        create_parent_all(&path)?;
 
         let file = OpenOptions::new().create(true).append(true).open(&path)?;
         let file = LineWriter::new(file);

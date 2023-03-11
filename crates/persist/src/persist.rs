@@ -1,11 +1,13 @@
 use quelle_core::prelude::Meta;
 use std::{
-    fs::{self, File, OpenOptions},
+    fs::{File, OpenOptions},
     io::{BufReader, BufWriter},
     path::PathBuf,
 };
 
-use crate::{error::PersistResult, global::Global, novel::PersistNovel, PersistOptions};
+use crate::{
+    create_parent_all, error::PersistResult, global::Global, novel::PersistNovel, PersistOptions,
+};
 
 #[derive(Debug)]
 pub struct Persist {
@@ -41,12 +43,7 @@ impl Persist {
 
     pub fn save_global(&self, global: &Global) -> PersistResult<()> {
         let path = self.options.global_path.as_path();
-
-        if let Some(parent) = path.parent() {
-            if !parent.exists() {
-                fs::create_dir_all(parent)?;
-            }
-        }
+        create_parent_all(path)?;
 
         let file = OpenOptions::new()
             .create(true)

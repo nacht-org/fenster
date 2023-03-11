@@ -4,7 +4,7 @@ mod download;
 mod lock;
 
 use std::{
-    fs::{self, File},
+    fs::File,
     io::BufWriter,
     path::{Path, PathBuf},
     process::exit,
@@ -18,7 +18,7 @@ use download::DownloadOptions;
 use lock::Lock;
 use log::{info, warn};
 use quelle_engine::Runner;
-use quelle_persist::{Persist, PersistOptions};
+use quelle_persist::{create_parent_all, Persist, PersistOptions};
 use simplelog::{Config, LevelFilter, TermLogger};
 use url::Url;
 
@@ -179,11 +179,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
 
             let output_path =
                 path.join(format!("output/{}.epub", slug::slugify(&data.novel.title)));
-            if let Some(parent) = output_path.parent() {
-                if !parent.exists() {
-                    fs::create_dir_all(parent)?;
-                }
-            }
+            create_parent_all(&output_path)?;
 
             let mut file = BufWriter::new(File::create(&output_path)?);
 
