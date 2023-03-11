@@ -38,7 +38,9 @@ impl<'a> DownloadHandler<'a> {
         let meta = runner.meta()?;
 
         let persist_novel = persist.persist_novel(persist.novel_path(&meta, &novel.title));
-        let data = persist_novel.read_data()?.unwrap_or(SavedNovel::new(novel));
+        let data = persist_novel
+            .read_data()?
+            .unwrap_or_else(|| SavedNovel::new(novel));
 
         let log = persist_novel.event_log()?;
 
