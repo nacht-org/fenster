@@ -45,8 +45,12 @@ impl<'a> PersistNovel<'a> {
         &self.dir
     }
 
+    pub fn data_path(&self) -> PathBuf {
+        self.dir.join(&self.persist.options.novel.filename)
+    }
+
     pub fn read_data(&self) -> PersistResult<Option<SavedNovel>> {
-        let path = self.persist.options.novel.file_path();
+        let path = self.data_path();
 
         let data = if path.exists() {
             let file = File::open(&path)?;
@@ -60,7 +64,7 @@ impl<'a> PersistNovel<'a> {
     }
 
     pub fn write_data(&self, data: &SavedNovel) -> PersistResult<()> {
-        let path = self.persist.options.novel.file_path();
+        let path = self.data_path();
 
         if let Some(parent) = path.parent() {
             if !parent.exists() {

@@ -35,9 +35,3 @@ impl Default for PersistOptions {
         }
     }
 }
-
-impl NovelOptions {
-    pub fn file_path(&self) -> PathBuf {
-        self.dir.join(&self.filename)
-    }
-}
