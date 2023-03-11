@@ -1,5 +1,5 @@
 use std::{
-    fs::{File, OpenOptions},
+    fs::{self, File, OpenOptions},
     io::{BufRead, BufReader, LineWriter, Write},
     path::PathBuf,
 };
@@ -29,7 +29,13 @@ pub enum EventKind {
 
 impl EventLog {
     pub fn new(path: PathBuf) -> PersistResult<Self> {
-        let file = OpenOptions::new().append(true).open(&path)?;
+        if let Some(parent) = path.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent)?;
+            }
+        }
+
+        let file = OpenOptions::new().create(true).append(true).open(&path)?;
         let file = LineWriter::new(file);
 
         Ok(Self {
