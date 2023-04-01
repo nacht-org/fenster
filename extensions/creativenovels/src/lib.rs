@@ -2,12 +2,13 @@
 #[macro_use]
 extern crate quelle_glue;
 
+use std::collections::HashMap;
+
 use kuchiki::{traits::TendrilSink, NodeRef};
 use once_cell::sync::Lazy;
 use quelle_core::prelude::*;
 use quelle_glue::prelude::*;
 use regex::Regex;
-use serde_json::json;
 
 define_meta! {
     let META = {
@@ -77,15 +78,15 @@ fn collect_volumes(doc: &NodeRef) -> Result<Vec<Volume>, QuelleError> {
         get_novel_id(doc).ok_or_else(|| QuelleError::ParseFailed(ParseError::ElementNotFound))?;
     let security_key = get_security_key(doc);
 
+    let mut form = HashMap::new();
+    form.insert(String::from("action"), String::from("crn_chapter_list"));
+    form.insert(String::from("view_id"), novel_id.to_string());
+    form.insert(String::from("s"), security_key);
+
     let response = Request::post(String::from(
         "https://creativenovels.com/wp-admin/admin-ajax.php",
     ))
-    .json_data(&json!({
-        "action": "crn_chapter_list",
-        "view_id": novel_id,
-        "s": security_key,
-    }))
-    .unwrap()
+    .form(form)
     .send()?;
 
     let content = response.text().unwrap();
