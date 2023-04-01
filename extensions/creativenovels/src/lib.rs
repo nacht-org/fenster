@@ -1,11 +1,10 @@
-mod parse_date;
-
 #[allow(unused_imports)]
 #[macro_use]
 extern crate quelle_glue;
 
 use std::collections::HashMap;
 
+use chrono::{NaiveDate, NaiveTime};
 use kuchiki::{traits::TendrilSink, NodeRef};
 use once_cell::sync::Lazy;
 use quelle_core::prelude::*;
@@ -34,13 +33,9 @@ pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
     let response = Request::get(url.clone()).send()?;
     let doc = kuchiki::parse_html().one(response.text().unwrap());
 
-    println!("doc created");
-
     let author = doc
         .select_first(".x-bar-container > [class*='14']")
         .get_text()?;
-
-    println!("got author");
 
     let cover_element = doc.select_first("img.book_cover").ok();
     let cover = cover_element
@@ -49,8 +44,6 @@ pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
             None => node.get_attribute("data-cfsrc"),
         })
         .flatten();
-
-    println!("got cover");
 
     let novel = Novel {
         title: doc
@@ -96,7 +89,7 @@ fn collect_volumes(doc: &NodeRef) -> Result<Vec<Volume>, QuelleError> {
         let content = &content["success.define.".len()..];
         for data in content.split(".end_data.") {
             let parts = data.split(".data.").collect::<Vec<_>>();
-            if parts.len() < 2 {
+            if parts.len() < 3 {
                 continue;
             }
 
@@ -104,7 +97,9 @@ fn collect_volumes(doc: &NodeRef) -> Result<Vec<Volume>, QuelleError> {
                 index: volume.chapters.len() as i32,
                 title: parts[0].to_owned(),
                 url: parts[1].to_owned(),
-                updated_at: None,
+                updated_at: NaiveDate::parse_from_str(parts[2].trim(), "%B %-d, %Y")
+                    .map(|d| TaggedDateTime::Local(d.and_time(NaiveTime::default())))
+                    .ok(),
             };
 
             volume.chapters.push(chapter);
@@ -185,7 +180,7 @@ pub fn fetch_chapter_content(url: String) -> Result<String, QuelleError> {
     let content = doc
         .select_first("article .entry-content")
         .map_err(|_| QuelleError::ParseFailed(ParseError::ElementNotFound))?;
-    
+
     content.attributes.borrow_mut().map.clear();
 
     const BAD_SELECTORS: [&str; 5] = [
