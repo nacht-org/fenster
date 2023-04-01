@@ -56,7 +56,7 @@ pub fn bundle_epub(
     builder.metadata("generator", "quelle")?;
 
     for lang in &novel.langs {
-        builder.metadata("language", lang)?;
+        builder.metadata("lang", lang)?;
     }
 
     info!("Written metadata");
