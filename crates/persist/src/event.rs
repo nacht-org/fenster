@@ -1,6 +1,6 @@
 use std::{
     fs::{File, OpenOptions},
-    io::{self, BufRead, BufReader, LineWriter, Write},
+    io::{self, BufRead, BufReader, LineWriter, Seek, Write},
     path::PathBuf,
 };
 
@@ -29,6 +29,7 @@ pub enum EventKind {
 
 impl EventLog {
     pub fn new(path: PathBuf) -> PersistResult<Self> {
+        println!("event_log = {}", path.display());
         create_parent_all(&path)?;
 
         let file = OpenOptions::new().create(true).append(true).open(&path)?;
@@ -87,13 +88,8 @@ impl EventLog {
     }
 
     pub fn truncate(&mut self) -> io::Result<()> {
-        let file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .truncate(true)
-            .open(&self.path)?;
-
-        self.file = LineWriter::new(file);
+        self.file.get_mut().set_len(0)?;
+        self.file.get_mut().seek(io::SeekFrom::Start(0))?;
         Ok(())
     }
 }

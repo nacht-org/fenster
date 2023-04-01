@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use quelle_core::prelude::{Chapter, Novel};
 use serde::{Deserialize, Serialize};
 
-use crate::{error::PersistResult, event::EventLog, Event, EventKind, Persist, create_parent_all};
+use crate::{create_parent_all, error::PersistResult, event::EventLog, Event, EventKind, Persist};
 
 #[derive(Debug)]
 pub struct PersistNovel<'a> {

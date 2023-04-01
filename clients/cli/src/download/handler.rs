@@ -35,6 +35,10 @@ impl<'a> DownloadHandler<'a> {
         runner.setup()?;
 
         let novel = runner.fetch_novel(url.as_str())?;
+        if novel.title.is_empty() {
+            bail!("The novel title cannot be empty");
+        }
+
         let meta = runner.meta()?;
 
         let persist_novel = persist.persist_novel(persist.novel_path(&meta, &novel.title));

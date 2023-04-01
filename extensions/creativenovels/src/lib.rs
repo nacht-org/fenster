@@ -95,8 +95,8 @@ fn collect_volumes(doc: &NodeRef) -> Result<Vec<Volume>, QuelleError> {
 
             let chapter = Chapter {
                 index: volume.chapters.len() as i32,
-                title: parts[0].to_owned(),
-                url: parts[1].to_owned(),
+                url: parts[0].to_owned(),
+                title: parts[1].to_owned(),
                 updated_at: NaiveDate::parse_from_str(parts[2].trim(), "%B %-d, %Y")
                     .map(|d| TaggedDateTime::Local(d.and_time(NaiveTime::default())))
                     .ok(),

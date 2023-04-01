@@ -4,7 +4,7 @@ use std::{fs, io, path::Path};
 pub fn create_parent_all(path: &Path) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         if !parent.exists() {
-            fs::create_dir_all(path)?;
+            fs::create_dir_all(parent)?;
         }
     }
     Ok(())
