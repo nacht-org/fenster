@@ -6,6 +6,8 @@ use kuchiki::{traits::TendrilSink, NodeRef};
 use once_cell::sync::Lazy;
 use quelle_core::prelude::*;
 use quelle_glue::prelude::*;
+use regex::Regex;
+use serde_json::json;
 
 define_meta! {
     let META = {
@@ -71,14 +73,81 @@ pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
 fn collect_volumes(doc: &NodeRef) -> Result<Vec<Volume>, QuelleError> {
     let mut volume = Volume::default();
 
-    let shortlink = doc
-        .select_first("link[rel='shortlink']")
-        .get_attribute("href")
-        .ok_or_else(|| QuelleError::ParseFailed(ParseError::ElementNotFound))?;
+    let novel_id =
+        get_novel_id(doc).ok_or_else(|| QuelleError::ParseFailed(ParseError::ElementNotFound))?;
+    let security_key = get_security_key(doc);
 
-    println!("got shortlink");
+    let response = Request::post(String::from(
+        "https://creativenovels.com/wp-admin/admin-ajax.php",
+    ))
+    .json_data(&json!({
+        "action": "crn_chapter_list",
+        "view_id": novel_id,
+        "s": security_key,
+    }))
+    .unwrap()
+    .send()?;
+
+    let content = response.text().unwrap();
+    if content.starts_with("success") {
+        let content = &content["success.define.".len()..];
+        for data in content.split(".end_data.") {
+            let parts = data.split(".data.").collect::<Vec<_>>();
+            if parts.len() < 2 {
+                continue;
+            }
+
+            let chapter = Chapter {
+                index: volume.chapters.len() as i32,
+                title: parts[0].to_owned(),
+                url: parts[1].to_owned(),
+                updated_at: None,
+            };
+
+            volume.chapters.push(chapter);
+        }
+    }
 
     Ok(vec![volume])
+}
+
+fn get_novel_id(doc: &NodeRef) -> Option<usize> {
+    let shortlink = doc
+        .select_first("link[rel='shortlink']")
+        .get_attribute("href");
+
+    shortlink
+        .as_ref()
+        .map(|link| link.split_once('?'))
+        .flatten()
+        .map(|(_, query)| query.split_once('='))
+        .flatten()
+        .map(|(name, value)| if name == "p" { Some(value) } else { None })
+        .flatten()
+        .map(|value| value.parse().ok())
+        .flatten()
+}
+
+fn get_security_key(doc: &NodeRef) -> String {
+    let mut security_key = String::new();
+    let p = Regex::new(r#""([^"]+)""#).unwrap();
+
+    let Ok(scripts) = doc.select("script") else { return security_key; };
+    for script in scripts {
+        let text = script.get_text();
+        if text.is_empty() || !text.contains("var chapter_list_summon") {
+            continue;
+        }
+
+        let matches = p.find_iter(&text).map(|m| m.as_str()).collect::<Vec<_>>();
+        if let ["\"ajaxurl\"", "\"https:\\/\\/creativenovels.com\\/wp-admin\\/admin-ajax.php\"", "\"security\"", key] =
+            &matches[..]
+        {
+            security_key = key[1..(key.len() - 1)].to_string();
+        }
+    }
+
+    security_key
 }
 
 fn collect_metadata(doc: &NodeRef) -> Result<Vec<Metadata>, QuelleError> {
