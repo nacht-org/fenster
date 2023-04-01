@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -6,8 +8,13 @@ pub struct Request {
     pub method: Method,
     pub url: String,
     pub params: Option<String>,
-    pub data: Option<String>,
+    pub data: Option<Body>,
     pub headers: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum Body {
+    Form(HashMap<String, String>),
 }
 
 impl Request {
@@ -31,15 +38,15 @@ impl Request {
         Request::new(Method::Post, url)
     }
 
+    #[inline]
+    pub fn form(mut self, value: HashMap<String, String>) -> Self {
+        self.data = Some(Body::Form(value));
+        self
+    }
+
     pub fn json_params(mut self, value: &Value) -> Result<Self, serde_json::Error> {
         let params = serde_json::to_string(value)?;
         self.params = Some(params);
-        Ok(self)
-    }
-
-    pub fn json_data(mut self, value: &Value) -> Result<Self, serde_json::Error> {
-        let data = serde_json::to_string(value)?;
-        self.data = Some(data);
         Ok(self)
     }
 
@@ -112,6 +119,19 @@ pub enum RequestErrorKind {
 impl From<RequestError> for BoxedRequestError {
     fn from(inner: RequestError) -> Self {
         BoxedRequestError(Box::new(inner))
+    }
+}
+
+#[cfg(feature = "reqwest")]
+impl From<Method> for reqwest::Method {
+    fn from(value: Method) -> Self {
+        match value {
+            Method::Get => reqwest::Method::GET,
+            Method::Post => reqwest::Method::POST,
+            Method::Put => reqwest::Method::PUT,
+            Method::Patch => reqwest::Method::PATCH,
+            Method::Delete => reqwest::Method::DELETE,
+        }
     }
 }
 

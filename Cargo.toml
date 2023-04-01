@@ -10,6 +10,7 @@ members = [
     "crates/persist",
     "extensions/novelpub",
     "extensions/royalroad",
+    "extensions/creativenovels",
     "clients/cli",
 ]
 

@@ -1,7 +1,5 @@
-use std::str::FromStr;
-
 use log::{debug, trace};
-use quelle_core::prelude::{Request, RequestError, RequestErrorKind, Response};
+use quelle_core::prelude::{Body, Request, RequestError, RequestErrorKind, Response};
 use wasmtime::Caller;
 
 use crate::{
@@ -14,17 +12,25 @@ pub fn send_request(mut caller: Caller<'_, Data>, ptr: i32) -> i32 {
 
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
 
-    let request = read_str(&mut caller, &memory, ptr);
-    let request = serde_json::from_str::<Request>(request).unwrap();
-    debug!("Sending http request: {request:?}.");
+    let request_data = read_str(&mut caller, &memory, ptr);
+    let request_data = serde_json::from_str::<Request>(request_data).unwrap();
+    debug!("Sending http request: {request_data:?}.");
 
     let client = &caller.data().client;
-    let response = client.execute(reqwest::blocking::Request::new(
-        reqwest::Method::GET,
-        reqwest::Url::from_str(&request.url).unwrap(),
-    ));
+    let mut request = client.request(request_data.method.into(), &request_data.url);
+    if let Some(body) = request_data.data {
+        match body {
+            Body::Form(data) => {
+                let mut multipart = reqwest::blocking::multipart::Form::new();
+                for (name, value) in data {
+                    multipart = multipart.text(name, value);
+                }
+                request = request.multipart(multipart);
+            }
+        };
+    }
 
-    let response = parse_response(response);
+    let response = parse_response(request.send());
     let json = serde_json::to_string(&response).unwrap();
 
     write_str(&mut caller, &memory, json.as_str())
