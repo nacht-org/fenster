@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use log::{debug, trace};
 use quelle_core::prelude::{Body, Request, RequestError, RequestErrorKind, Response};
 use wasmtime::Caller;
