@@ -1,3 +1,5 @@
+mod parse_date;
+
 #[allow(unused_imports)]
 #[macro_use]
 extern crate quelle_glue;
@@ -177,5 +179,43 @@ fn collect_metadata(doc: &NodeRef) -> Result<Vec<Metadata>, QuelleError> {
 
 #[expose]
 pub fn fetch_chapter_content(url: String) -> Result<String, QuelleError> {
-    Ok(String::new())
+    let response = Request::get(url.clone()).send()?;
+    let doc = kuchiki::parse_html().one(response.text().unwrap());
+
+    let content = doc
+        .select_first("article .entry-content")
+        .map_err(|_| QuelleError::ParseFailed(ParseError::ElementNotFound))?;
+    
+    content.attributes.borrow_mut().map.clear();
+
+    const BAD_SELECTORS: [&str; 5] = [
+        ".announcements_crn",
+        ".support-placement",
+        "span[style*='color:transparent']",
+        ".count_gloss",
+        ".gloss_fine",
+    ];
+
+    content
+        .as_node()
+        .select(&BAD_SELECTORS.join(","))
+        .detach_all();
+
+    let elements = content
+        .as_node()
+        .select("span[data-preserver-spaces='true'], span[id^='tooltip']");
+    if let Ok(elements) = elements {
+        for element in elements {
+            for child in element.as_node().children() {
+                element.as_node().insert_before(child);
+            }
+            element.as_node().detach();
+        }
+    }
+
+    content
+        .as_node()
+        .outer_html()
+        .map(|c| c.replace("\n", ""))
+        .map_err(|e| e.into())
 }
