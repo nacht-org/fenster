@@ -47,7 +47,7 @@ pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
 
     let novel = Novel {
         title: doc
-            .select_first(".x-bar-container > [class*='12']")
+            .select_first(".x-bar-container > [class*='e12']")
             .get_text()?,
         authors: vec![author],
         cover,
