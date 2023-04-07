@@ -32,7 +32,7 @@ impl<'a> DownloadHandler<'a> {
         options: DownloadOptions,
     ) -> anyhow::Result<Self> {
         let mut runner = Runner::new(&wasm_path)?;
-        runner.setup()?;
+        runner.setup(log::LevelFilter::Info)?;
 
         let novel = runner.fetch_novel(url.as_str())?;
         if novel.title.is_empty() {

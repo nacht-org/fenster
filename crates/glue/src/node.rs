@@ -1,8 +1,8 @@
-use quelle_core::prelude::ParseError;
 use kuchiki::{
     iter::{Descendants, Elements, Select},
     ElementData, NodeDataRef, NodeRef,
 };
+use quelle_core::prelude::ParseError;
 
 pub trait GetText {
     type Output;

@@ -112,7 +112,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             popular,
         } => {
             let mut runner = Runner::new(&path)?;
-            runner.setup()?;
+            runner.setup(level)?;
 
             if meta {
                 let meta = runner.meta()?;

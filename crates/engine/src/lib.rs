@@ -2,7 +2,7 @@ pub mod error;
 mod module;
 
 use error::Error;
-use log::info;
+use log::{info, LevelFilter};
 use quelle_core::prelude::*;
 use reqwest::blocking::Client;
 use serde::de::DeserializeOwned;
@@ -36,7 +36,7 @@ struct Functions {
     last_result: TypedFunc<(), i32>,
 
     // User
-    setup: Option<TypedFunc<(), ()>>,
+    setup: Option<TypedFunc<i32, ()>>,
     meta: TypedFunc<(), i32>,
     fetch_novel: TypedFunc<i32, i32>,
     fetch_chapter_content: TypedFunc<i32, i32>,
@@ -55,6 +55,7 @@ impl Runner {
         linker.func_wrap("env", "io_print", module::io::print)?;
         linker.func_wrap("env", "io_eprint", module::io::eprint)?;
         linker.func_wrap("env", "io_trace", module::io::trace)?;
+        linker.func_wrap("env", "log_event", module::log::event)?;
 
         let data = Data {
             client: Client::builder()
@@ -116,9 +117,9 @@ impl Runner {
     /// Call the wasm setup function if the function exists
     ///
     /// This is usually used during debugging to setup panic hooks
-    pub fn setup(&mut self) -> crate::error::Result<()> {
+    pub fn setup(&mut self, filter: LevelFilter) -> crate::error::Result<()> {
         if let Some(func) = self.functions.setup.as_ref() {
-            func.call(&mut self.store, ())?;
+            func.call(&mut self.store, filter as i32)?;
         }
 
         Ok(())

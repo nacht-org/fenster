@@ -26,6 +26,21 @@ pub fn read_str_with_len<'c, 'm>(
     }
 }
 
+pub fn read_bytes_with_len<'c, 'm>(
+    caller: &'c mut Caller<'_, Data>,
+    memory: &'m Memory,
+    ptr: i32,
+    len: usize,
+) -> &'m [u8] {
+    info!("reading bytes from wasm memory of len: {len}");
+
+    unsafe {
+        let ptr = memory.data_ptr(&caller).offset(ptr as isize);
+        let bytes = slice::from_raw_parts(ptr, len);
+        bytes
+    }
+}
+
 pub fn write_str<'c, 'm>(caller: &'c mut Caller<'_, Data>, memory: &'m Memory, value: &str) -> i32 {
     let alloc_func = caller.get_export("alloc").unwrap().into_func().unwrap();
 

@@ -11,3 +11,4 @@ quelle_core = { path = "../core" }
 quelle_glue_derive = { path = "../glue_derive" }
 serde = "1.0.147"
 kuchiki = "0.8.1"
+log = { workspace = true, features = ["std"] }

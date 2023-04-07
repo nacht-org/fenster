@@ -59,6 +59,8 @@ macro_rules! println {
     ($($arg:tt)*) => ($crate::out::_print_args_nl(format_args!($($arg)*)));
 }
 
+pub use crate::println;
+
 /// Overrides the default `eprint!` macro.
 #[macro_export]
 macro_rules! eprint {

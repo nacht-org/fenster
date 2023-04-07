@@ -12,6 +12,7 @@ serde_json = "1.0.87"
 url = "2.3.1"
 thiserror = "1.0.37"
 chrono = { workspace = true }
+log = { workspace = true, features = ["serde"] }
 
 [features]
 reqwest = ['dep:reqwest']

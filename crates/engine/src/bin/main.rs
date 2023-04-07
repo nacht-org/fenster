@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         "target/wasm32-unknown-unknown/debug/extension_royalroad.wasm",
     ))?;
 
-    runner.setup()?;
+    runner.setup(LevelFilter::Trace)?;
 
     info!("Calling exposed wasm 'meta' function");
     let meta = runner.meta()?;
