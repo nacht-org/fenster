@@ -7,7 +7,6 @@ use kuchiki::{
     iter::{Descendants, Elements, Select},
     traits::TendrilSink,
 };
-use log::{debug, error, info, trace, warn, LevelFilter};
 use once_cell::sync::Lazy;
 use quelle_core::prelude::*;
 use quelle_glue::prelude::*;
@@ -21,23 +20,6 @@ define_meta! {
         rds: [Ltr],
         attrs: [],
     };
-}
-
-#[expose]
-pub fn setup(filter: LevelFilter) {
-    #[cfg(debug_assertions)]
-    set_panic_hook();
-
-    println!("{filter}");
-    Logger::new(filter).init();
-
-    error!("error");
-    warn!("warn");
-    info!("info");
-    debug!("debug");
-    trace!("trace");
-
-    info!("initialized logger");
 }
 
 #[expose]

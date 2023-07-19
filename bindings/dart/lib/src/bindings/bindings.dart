@@ -14,6 +14,8 @@ class QuelleBindings {
   late int Function(Pointer<Utf8> path, Pointer<Pointer<Engine>> engine_out)
       open_engine_with_path;
 
+  late int Function(Pointer<Engine> engine, int ptr, int len) memloc_dealloc;
+
   late int Function(Pointer<Engine> engine) source_meta;
 
   late int Function(Pointer<Engine> engine, Pointer<Utf8> url) fetch_novel;
@@ -37,12 +39,19 @@ class QuelleBindings {
 
   late Pointer<Utf8> Function() last_result;
 
+  late Pointer<Uint8> Function() last_pointer;
+
+  late int Function() last_offset;
+
   QuelleBindings() {
     quelle = loadDynamicLibrary();
 
     open_engine_with_path = quelle
         .lookup<NativeFunction<open_engine_with_path_native_t>>(
             "open_engine_with_path")
+        .asFunction();
+    memloc_dealloc = quelle
+        .lookup<NativeFunction<memloc_dealloc_native_t>>('memloc_dealloc')
         .asFunction();
     source_meta = quelle
         .lookup<NativeFunction<source_meta_native_t>>("source_meta")
@@ -73,6 +82,12 @@ class QuelleBindings {
         .asFunction();
     last_result = quelle
         .lookup<NativeFunction<last_result_native_t>>("last_result")
+        .asFunction();
+    last_pointer = quelle
+        .lookup<NativeFunction<last_pointer_native_t>>('last_pointer')
+        .asFunction();
+    last_offset = quelle
+        .lookup<NativeFunction<last_offset_native_t>>('last_offset')
         .asFunction();
   }
 }

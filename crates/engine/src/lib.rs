@@ -2,10 +2,10 @@ pub mod error;
 mod module;
 
 use error::Error;
-use log::{info, LevelFilter};
+use log::info;
 use quelle_core::prelude::*;
 use reqwest::blocking::Client;
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 use std::{path::Path, slice};
 use wasmtime::*;
 
@@ -37,6 +37,7 @@ struct Functions {
 
     // User
     setup: Option<TypedFunc<i32, ()>>,
+    setup_default: TypedFunc<i32, ()>,
     meta: TypedFunc<(), i32>,
     fetch_novel: TypedFunc<i32, i32>,
     fetch_chapter_content: TypedFunc<i32, i32>,
@@ -96,6 +97,7 @@ impl Runner {
             stack_pop: get_func!("stack_pop"),
             last_result: get_func!("last_result"),
             setup: get_func_optional!("setup"),
+            setup_default: get_func!("setup_default"),
             meta: get_func!("meta"),
             fetch_novel: get_func!("fetch_novel"),
             fetch_chapter_content: get_func!("fetch_chapter_content"),
@@ -114,13 +116,14 @@ impl Runner {
         })
     }
 
-    /// Call the wasm setup function if the function exists
-    ///
-    /// This is usually used during debugging to setup panic hooks
-    pub fn setup(&mut self, filter: LevelFilter) -> crate::error::Result<()> {
-        if let Some(func) = self.functions.setup.as_ref() {
-            func.call(&mut self.store, filter as i32)?;
-        }
+    /// Call the extension's setup function
+    pub fn setup(&mut self, config: &ExtensionConfig) -> crate::error::Result<()> {
+        let config = self.write_serialize(config)?;
+
+        self.functions
+            .setup
+            .unwrap_or(self.functions.setup_default)
+            .call(&mut self.store, config)?;
 
         Ok(())
     }
@@ -137,16 +140,11 @@ impl Runner {
         Ok(meta)
     }
 
-    pub fn meta_raw(&mut self) -> error::Result<String> {
-        let ptr = self.functions.meta.call(&mut self.store, ())?;
-
-        let bytes = self.read_bytes(ptr)?;
-        let meta = String::from_utf8_lossy(bytes).to_string();
-
-        let len = bytes.len() as i32;
-        self.dealloc_memory(ptr, len)?;
-
-        Ok(meta)
+    pub unsafe fn meta_memloc(&mut self) -> error::Result<MemLoc> {
+        let offset = self.functions.meta.call(&mut self.store, ())?;
+        let len = self.stack_pop()?;
+        let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
+        Ok(MemLoc { offset, ptr, len })
     }
 
     pub fn fetch_novel(&mut self, url: &str) -> crate::error::Result<Novel> {
@@ -325,6 +323,14 @@ impl Runner {
         out
     }
 
+    fn write_serialize<T>(&mut self, value: &T) -> crate::error::Result<i32>
+    where
+        T: Serialize,
+    {
+        let string = serde_json::to_string(value).map_err(|_| Error::SerializeError)?;
+        return self.write_string(&string);
+    }
+
     fn write_string(&mut self, value: &str) -> crate::error::Result<i32> {
         // length of the string with trailing null byte
         let ptr = self.alloc_memory(value.len() as i32)?;
@@ -344,7 +350,7 @@ impl Runner {
             .map_err(|e| e.into())
     }
 
-    fn dealloc_memory(&mut self, ptr: i32, len: i32) -> crate::error::Result<()> {
+    pub fn dealloc_memory(&mut self, ptr: i32, len: i32) -> crate::error::Result<()> {
         self.functions
             .dealloc
             .call(&mut self.store, (ptr, len))
@@ -371,4 +377,11 @@ impl Runner {
             .call(&mut self.store, ())
             .map_err(|e| e.into())
     }
+}
+
+#[derive(Debug)]
+pub struct MemLoc {
+    pub offset: i32,
+    pub ptr: *mut u8,
+    pub len: i32,
 }

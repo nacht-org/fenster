@@ -28,7 +28,7 @@ class Quelle {
 
   String metaJson() {
     final signedLength = bindings.source_meta(_engine.unsafe());
-    return _readStringResult(signedLength);
+    return _readMemLoc(signedLength);
   }
 
   Meta meta() {
@@ -119,13 +119,44 @@ class Quelle {
     }
   }
 
+  String _readMemLoc(int signedLength) {
+    if (signedLength > 0) {
+      final pointer = bindings.last_pointer();
+      final offset = bindings.last_offset();
+
+      final value = pointer.asTypedList(signedLength);
+      final string = utf8.decode(value);
+      dealloc(offset, signedLength);
+      return string;
+    } else if (signedLength < 0) {
+      throw _readResultError(-signedLength);
+    } else {
+      return '';
+    }
+  }
+
   QuelleException _readError() {
     Pointer<Pointer<Utf8>> buffer = calloc();
     bindings.last_error_message(buffer);
     final errorMessage = buffer.value.toDartString();
+    print(errorMessage);
     calloc.free(buffer.value);
     calloc.free(buffer);
     return QuelleException(errorMessage);
+  }
+
+  QuelleException _readResultError(length) {
+    final pointer = bindings.last_result();
+    final errorMessage = pointer.toDartString(length: length);
+    calloc.free(pointer);
+    throw QuelleException(errorMessage);
+  }
+
+  void dealloc(int offset, int length) {
+    final result = bindings.memloc_dealloc(_engine.unsafe(), offset, length);
+    if (result < 0) {
+      throw _readResultError(-result);
+    }
   }
 }
 

@@ -13,6 +13,9 @@ pub enum Error {
     #[error("{0}")]
     Trap(#[from] Trap),
 
+    #[error("failed to serialize parameter")]
+    SerializeError,
+
     #[error("failed to deserialize returned value")]
     DeserializeError,
 

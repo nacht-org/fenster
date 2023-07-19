@@ -1,6 +1,6 @@
 use std::mem;
 
-use quelle_core::prelude::Meta;
+use quelle_core::prelude::{ExtensionConfig, Meta};
 
 use super::{stack_pop, stack_push};
 
@@ -50,21 +50,21 @@ impl ToWasmAbi for &str {
 #[macro_export]
 macro_rules! impl_wasm_abi_for_serde {
     ($name:ty) => {
-        impl_from_abi_for_serde!($name)
-        impl_to_abi_for_serde!($name)
+        impl_from_abi_for_serde!($name);
+        impl_to_abi_for_serde!($name);
     };
 }
 
 #[macro_export]
 macro_rules! impl_from_abi_for_serde {
     ($name:ty) => {
-        impl crate::abi::ToWasmAbi for $name {
+        impl crate::abi::FromWasmAbi for $name {
             type Type = *mut u8;
 
             fn from_wasm_abi(value: Self::Type) -> Self {
-                let len = crate::mem::stack_pop() as usize;
+                let len = crate::abi::stack_pop() as usize;
                 let bytes = unsafe { Vec::from_raw_parts(value, len, len) };
-                serde_json::from_bytes(bytes).unwrap()
+                serde_json::from_slice(&bytes).unwrap()
             }
         }
     };
@@ -89,3 +89,4 @@ macro_rules! impl_to_abi_for_serde {
 }
 
 impl_to_abi_for_serde!(&Meta);
+impl_wasm_abi_for_serde!(ExtensionConfig);

@@ -36,10 +36,19 @@ fn open_engine_with_path_private(
 
 #[no_mangle]
 pub extern "C" fn source_meta(engine: *mut Runner) -> i32 {
-    result::capture_result(|| {
+    result::capture_memloc(|| unsafe {
+        let engine = engine.as_mut().ok_or(CustomError::WrongEnginePtr)?;
+        let memloc = engine.meta_memloc()?;
+        Ok(memloc)
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn memloc_dealloc(engine: *mut Runner, ptr: i32, len: i32) -> i32 {
+    result::capture_error(|| {
         let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
-        let meta = engine.meta_raw()?;
-        Ok(meta.into_bytes())
+        engine.dealloc_memory(ptr, len)?;
+        Ok(())
     })
 }
 

@@ -21,12 +21,6 @@ define_meta! {
     };
 }
 
-#[cfg(debug_assertions)]
-#[expose]
-pub fn setup() {
-    set_panic_hook();
-}
-
 #[expose]
 pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
     let response = Request::get(url.clone()).send()?;

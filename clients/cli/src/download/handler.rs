@@ -7,7 +7,7 @@ use std::{
 
 use anyhow::bail;
 use log::info;
-use quelle_core::prelude::{Chapter, Meta};
+use quelle_core::prelude::{Chapter, ExtensionConfig, Meta};
 use quelle_engine::Runner;
 use quelle_persist::{CoverLoc, EventKind, EventLog, Persist, PersistNovel, SavedNovel};
 use reqwest::{blocking::Client, header::CONTENT_TYPE};
@@ -32,7 +32,9 @@ impl<'a> DownloadHandler<'a> {
         options: DownloadOptions,
     ) -> anyhow::Result<Self> {
         let mut runner = Runner::new(&wasm_path)?;
-        runner.setup(log::LevelFilter::Info)?;
+        runner.setup(&ExtensionConfig {
+            level_filter: log::LevelFilter::Info,
+        })?;
 
         let novel = runner.fetch_novel(url.as_str())?;
         if novel.title.is_empty() {
