@@ -44,33 +44,22 @@ pub extern "C" fn source_meta(engine: *mut Runner) -> i32 {
 }
 
 #[no_mangle]
-pub extern "C" fn memloc_dealloc(engine: *mut Runner, ptr: i32, len: i32) -> i32 {
-    result::capture_error(|| {
-        let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
-        engine.dealloc_memory(ptr, len)?;
-        Ok(())
-    })
-}
-
-#[no_mangle]
 pub extern "C" fn fetch_novel(engine: *mut Runner, url: *mut c_char) -> i32 {
-    result::capture_result(|| {
-        let url = unsafe { CStr::from_ptr(url) }.to_str()?;
-        let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
-
-        let content = engine.fetch_novel_raw(url)?;
-        Ok(content.into_bytes())
+    result::capture_memloc(|| unsafe {
+        let url = CStr::from_ptr(url).to_str()?;
+        let engine = engine.as_mut().ok_or(CustomError::WrongEnginePtr)?;
+        let memloc = engine.fetch_novel_memloc(url)?;
+        Ok(memloc)
     })
 }
 
 #[no_mangle]
 pub extern "C" fn fetch_chapter_content(engine: *mut Runner, url: *mut c_char) -> i32 {
-    result::capture_result(|| {
-        let url = unsafe { CStr::from_ptr(url) }.to_str()?;
-        let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
-
-        let content = engine.fetch_chapter_content(url)?;
-        Ok(content.into_bytes())
+    result::capture_memloc(|| unsafe {
+        let url = CStr::from_ptr(url).to_str()?;
+        let engine = engine.as_mut().ok_or(CustomError::WrongEnginePtr)?;
+        let content = engine.fetch_chapter_content_memloc(url)?;
+        Ok(content)
     })
 }
 
@@ -83,12 +72,20 @@ pub extern "C" fn popular_supported(engine: *mut Runner) -> i32 {
 }
 
 #[no_mangle]
+pub extern "C" fn popular_url(engine: *mut Runner, page: i32) -> i32 {
+    result::capture_memloc(|| unsafe {
+        let engine = engine.as_mut().ok_or(CustomError::WrongEnginePtr)?;
+        let memloc = engine.popular_url_memloc(page)?;
+        Ok(memloc)
+    })
+}
+
+#[no_mangle]
 pub extern "C" fn popular(engine: *mut Runner, page: i32) -> i32 {
-    result::capture_result(|| {
-        let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
-        let novels = engine.popular(page)?;
-        let content = serde_json::to_string(&novels)?;
-        Ok(content.into_bytes())
+    result::capture_memloc(|| unsafe {
+        let engine = engine.as_mut().ok_or(CustomError::WrongEnginePtr)?;
+        let memloc = engine.popular_memloc(page)?;
+        Ok(memloc)
     })
 }
 
@@ -102,10 +99,19 @@ pub extern "C" fn text_search_supported(engine: *mut Runner) -> i32 {
 
 #[no_mangle]
 pub extern "C" fn text_search(engine: *mut Runner, query: *mut c_char, page: i32) -> i32 {
-    result::capture_result(|| {
-        let query = unsafe { CStr::from_ptr(query) }.to_str()?;
+    result::capture_memloc(|| unsafe {
+        let query = CStr::from_ptr(query).to_str()?;
+        let engine = engine.as_mut().ok_or(CustomError::WrongEnginePtr)?;
+        let memloc = engine.text_search_memloc(query, page)?;
+        Ok(memloc)
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn memloc_dealloc(engine: *mut Runner, ptr: i32, len: i32) -> i32 {
+    result::capture_error(|| {
         let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
-        let content = engine.text_search_raw(query, page)?;
-        Ok(content.into_bytes())
+        engine.dealloc_memory(ptr, len)?;
+        Ok(())
     })
 }

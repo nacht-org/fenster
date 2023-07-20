@@ -25,6 +25,8 @@ class QuelleBindings {
 
   late int Function(Pointer<Engine> engine) popular_supported;
 
+  late int Function(Pointer<Engine> engine, int page) popular_url;
+
   late int Function(Pointer<Engine> engine, int page) popular;
 
   late int Function(
@@ -66,6 +68,9 @@ class QuelleBindings {
     popular_supported = quelle
         .lookup<NativeFunction<popular_suppported_native_t>>(
             "popular_supported")
+        .asFunction();
+    popular_url = quelle
+        .lookup<NativeFunction<popular_url_native_t>>('popular_url')
         .asFunction();
     popular =
         quelle.lookup<NativeFunction<popular_native_t>>("popular").asFunction();

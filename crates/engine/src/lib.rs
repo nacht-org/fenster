@@ -153,13 +153,15 @@ impl Runner {
         self.parse_result::<Novel, QuelleError>(signed_len)
     }
 
-    pub fn fetch_novel_raw(&mut self, url: &str) -> error::Result<String> {
+    pub unsafe fn fetch_novel_memloc(&mut self, url: &str) -> error::Result<MemLoc> {
         let iptr = self.write_string(url)?;
-        let signed_len = self.functions.fetch_novel.call(&mut self.store, iptr)?;
-        self.parse_string_result::<QuelleError>(signed_len)
+        let len = self.functions.fetch_novel.call(&mut self.store, iptr)?;
+        let offset = self.functions.last_result.call(&mut self.store, ())?;
+        let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
+        Ok(MemLoc { offset, ptr, len })
     }
 
-    pub fn fetch_chapter_content(&mut self, url: &str) -> crate::error::Result<String> {
+    pub fn fetch_chapter_content(&mut self, url: &str) -> error::Result<String> {
         let iptr = self.write_string(url)?;
         let offset = self
             .functions
@@ -167,6 +169,17 @@ impl Runner {
             .call(&mut self.store, iptr)?;
 
         self.parse_string_result::<QuelleError>(offset)
+    }
+
+    pub unsafe fn fetch_chapter_content_memloc(&mut self, url: &str) -> error::Result<MemLoc> {
+        let iptr = self.write_string(url)?;
+        let len = self
+            .functions
+            .fetch_chapter_content
+            .call(&mut self.store, iptr)?;
+        let offset = self.functions.last_result.call(&mut self.store, ())?;
+        let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
+        Ok(MemLoc { offset, ptr, len })
     }
 
     pub fn text_search_supported(&self) -> bool {
@@ -188,9 +201,11 @@ impl Runner {
         self.parse_result::<Vec<BasicNovel>, QuelleError>(signed_len)
     }
 
-    pub fn text_search_raw(&mut self, query: &str, page: i32) -> error::Result<String> {
-        let signed_len = self.call_text_search(query, page)?;
-        self.parse_string_result::<QuelleError>(signed_len)
+    pub unsafe fn text_search_memloc(&mut self, query: &str, page: i32) -> error::Result<MemLoc> {
+        let len = self.call_text_search(query, page)?;
+        let offset = self.functions.last_result.call(&mut self.store, ())?;
+        let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
+        Ok(MemLoc { offset, ptr, len })
     }
 
     pub fn popular_supported(&self) -> bool {
@@ -199,14 +214,25 @@ impl Runner {
 
     pub fn popular_url(&mut self, page: i32) -> crate::error::Result<String> {
         if let Some(popular_url) = self.functions.popular_url {
-            let rptr = popular_url.call(&mut self.store, page)?;
-            let bytes = self.read_bytes(rptr)?;
+            let offset = popular_url.call(&mut self.store, page)?;
+            let bytes = self.read_bytes(offset)?;
             let string = String::from_utf8_lossy(bytes).to_string();
 
             let len = bytes.len() as i32;
-            self.dealloc_memory(rptr, len)?;
+            self.dealloc_memory(offset, len)?;
 
             Ok(string)
+        } else {
+            Err(error::Error::NotSupported(error::AffectedFunction::Popular))
+        }
+    }
+
+    pub unsafe fn popular_url_memloc(&mut self, page: i32) -> error::Result<MemLoc> {
+        if let Some(popular_url) = self.functions.popular_url {
+            let offset = popular_url.call(&mut self.store, page)?;
+            let len = self.stack_pop()?;
+            let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
+            Ok(MemLoc { offset, ptr, len })
         } else {
             Err(error::Error::NotSupported(error::AffectedFunction::Popular))
         }
@@ -220,9 +246,16 @@ impl Runner {
         }
     }
 
-    pub fn popular(&mut self, page: i32) -> crate::error::Result<Vec<BasicNovel>> {
-        let offset = self.call_popular(page)?;
-        self.parse_result::<Vec<BasicNovel>, QuelleError>(offset)
+    pub fn popular(&mut self, page: i32) -> error::Result<Vec<BasicNovel>> {
+        let signed_len = self.call_popular(page)?;
+        self.parse_result::<Vec<BasicNovel>, QuelleError>(signed_len)
+    }
+
+    pub unsafe fn popular_memloc(&mut self, page: i32) -> error::Result<MemLoc> {
+        let len = self.call_popular(page)?;
+        let offset = self.functions.last_result.call(&mut self.store, ())?;
+        let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
+        Ok(MemLoc { offset, ptr, len })
     }
 
     fn read_bytes(&mut self, offset: i32) -> crate::error::Result<&[u8]> {

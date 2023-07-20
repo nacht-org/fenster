@@ -28,7 +28,7 @@ class Quelle {
 
   String metaJson() {
     final signedLength = bindings.source_meta(_engine.unsafe());
-    return _readMemLoc(signedLength);
+    return MemLoc(_engine, signedLength).readAsString();
   }
 
   Meta meta() {
@@ -38,17 +38,14 @@ class Quelle {
 
   String fetchNovelJson(String url) {
     final urlC = Utf8Resource(url.toNativeUtf8());
-    String json;
 
     try {
       final signedLength =
           bindings.fetch_novel(_engine.unsafe(), urlC.unsafe());
-      json = _readStringResult(signedLength);
+      return MemLoc(_engine, signedLength).readAsString();
     } finally {
       urlC.free();
     }
-
-    return json;
   }
 
   Novel fetchNovel(String url) {
@@ -58,17 +55,14 @@ class Quelle {
 
   String fetchChapterContent(String url) {
     final urlC = Utf8Resource(url.toNativeUtf8());
-    String content;
 
     try {
       final signedLength =
           bindings.fetch_chapter_content(_engine.unsafe(), urlC.unsafe());
-      content = _readStringResult(signedLength);
+      return MemLoc(_engine, signedLength).readAsString();
     } finally {
       urlC.free();
     }
-
-    return content;
   }
 
   bool popularSupported() {
@@ -77,9 +71,14 @@ class Quelle {
     return result > 0;
   }
 
+  String popularUrl(int page) {
+    final length = bindings.popular_url(_engine.unsafe(), page);
+    return MemLoc(_engine, length).readAsString();
+  }
+
   String popularJson(int page) {
     final signedLength = bindings.popular(_engine.unsafe(), page);
-    return _readStringResult(signedLength);
+    return MemLoc(_engine, signedLength).readAsString();
   }
 
   bool textSearchSupported() {
@@ -90,48 +89,13 @@ class Quelle {
 
   String textSearchJson(String query, int page) {
     final queryC = Utf8Resource(query.toNativeUtf8());
-    String content;
 
     try {
       final signedLength =
           bindings.text_search(_engine.unsafe(), queryC.unsafe(), page);
-      content = _readStringResult(signedLength);
+      return MemLoc(_engine, signedLength).readAsString();
     } finally {
       queryC.free();
-    }
-
-    return content;
-  }
-
-  String _readStringResult(int signedLength) {
-    if (signedLength > 0) {
-      final pointer = bindings.last_result();
-      final value = pointer.toDartString(length: signedLength);
-      calloc.free(pointer);
-      return value;
-    } else if (signedLength < 0) {
-      final pointer = bindings.last_result();
-      final errorMessage = pointer.toDartString(length: -signedLength);
-      calloc.free(pointer);
-      throw QuelleException(errorMessage);
-    } else {
-      return '';
-    }
-  }
-
-  String _readMemLoc(int signedLength) {
-    if (signedLength > 0) {
-      final pointer = bindings.last_pointer();
-      final offset = bindings.last_offset();
-
-      final value = pointer.asTypedList(signedLength);
-      final string = utf8.decode(value);
-      dealloc(offset, signedLength);
-      return string;
-    } else if (signedLength < 0) {
-      throw _readResultError(-signedLength);
-    } else {
-      return '';
     }
   }
 
@@ -143,20 +107,6 @@ class Quelle {
     calloc.free(buffer.value);
     calloc.free(buffer);
     return QuelleException(errorMessage);
-  }
-
-  QuelleException _readResultError(length) {
-    final pointer = bindings.last_result();
-    final errorMessage = pointer.toDartString(length: length);
-    calloc.free(pointer);
-    throw QuelleException(errorMessage);
-  }
-
-  void dealloc(int offset, int length) {
-    final result = bindings.memloc_dealloc(_engine.unsafe(), offset, length);
-    if (result < 0) {
-      throw _readResultError(-result);
-    }
   }
 }
 
@@ -199,6 +149,59 @@ class Utf8Resource implements Finalizable {
 
 final DynamicLibrary stdlib = DynamicLibrary.process();
 final posixFree = stdlib.lookup<NativeFunction<Void Function(Pointer)>>("free");
+
+class MemLoc {
+  final EngineResource _engine;
+  final int length;
+
+  late final int offset;
+  late final Pointer<Uint8> ptr;
+
+  MemLoc(this._engine, this.length) {
+    offset = bindings.last_offset();
+    ptr = bindings.last_pointer();
+  }
+
+  String readAsString() {
+    if (length > 0) {
+      return _read();
+    } else if (length < 0) {
+      throw _readResultError(-length);
+    } else {
+      return '';
+    }
+  }
+
+  QuelleException _readResultError(length) {
+    // check for ffi specific error
+    final pointer = bindings.last_result();
+    if (pointer.address != nullptr.address) {
+      final errorMessage = pointer.toDartString(length: length);
+      calloc.free(pointer);
+      return QuelleException(errorMessage);
+    }
+
+    // read memloc as error
+    final errorJson = _read();
+    dealloc();
+    return QuelleException(errorJson);
+  }
+
+  String _read() {
+    final value = ptr.asTypedList(length.abs());
+    final string = utf8.decode(value);
+    dealloc();
+    return string;
+  }
+
+  void dealloc() {
+    final result =
+        bindings.memloc_dealloc(_engine.unsafe(), offset, length.abs());
+    if (result < 0) {
+      throw _readResultError(-result);
+    }
+  }
+}
 
 class QuelleException implements Exception {
   final String message;
