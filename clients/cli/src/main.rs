@@ -68,6 +68,15 @@ enum Commands {
         cover: CoverAction,
     },
 
+    Popular {
+        /// The url of the source website
+        url: Url,
+
+        /// The page to browse
+        #[arg(short, long, default_value = "1")]
+        page: i32,
+    },
+
     Bundle {
         url: Url,
     },
@@ -138,6 +147,31 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             };
 
             download::download(persist, url, PathBuf::from(&extension.path), options)?;
+        }
+        Commands::Popular { url, page } => {
+            let lock = Lock::open(&cli.lock_file)?;
+            let Some(extension) = lock.detect(url.as_str())? else {
+                println!("supported source not found.");
+                exit(1);
+            };
+
+            let mut runner = Runner::new(Path::new(&extension.path))?;
+            let meta = runner.meta()?;
+
+            if !runner.popular_supported() {
+                log::error!("'{}' does not support popular browse", meta.name);
+                exit(1);
+            }
+
+            log::info!("fetching popular from '{}'", meta.name);
+            let novels = runner.popular(page)?;
+            if novels.is_empty() {
+                log::error!("No novels found");
+            }
+
+            for novel in novels {
+                println!("{} <{}>", novel.title, novel.url);
+            }
         }
         Commands::Bundle { url } => {
             let persist = Persist::new(PersistOptions::default());
