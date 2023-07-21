@@ -31,14 +31,6 @@ pub extern "C" fn last_result() -> *mut u8 {
     ptr
 }
 
-pub fn capture_result(f: impl Fn() -> Result<Vec<u8>, Box<dyn error::Error>>) -> i32 {
-    match f() {
-        Ok(b) if b.is_empty() => 0,
-        Ok(b) => set_last_result(b) as i32,
-        Err(e) => -(set_last_result(e.to_string().into_bytes()) as i32),
-    }
-}
-
 #[no_mangle]
 pub extern "C" fn last_pointer() -> *mut u8 {
     let last_pointer = LAST_POINTER.with(|prev| prev.borrow_mut().take());
