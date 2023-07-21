@@ -116,7 +116,7 @@ fn collect_toc(url: &str) -> Result<Vec<Volume>, QuelleError> {
             .borrow()
             .get("href")
             .unwrap_or("0")
-            .split('-')
+            .split('=')
             .last()
             .unwrap()
             .trim()
