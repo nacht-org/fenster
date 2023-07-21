@@ -17,7 +17,8 @@ class Quelle {
     final pathC = Utf8Resource(path.toNativeUtf8());
 
     try {
-      final result = bindings.open_engine_with_path(pathC.unsafe(), engineOut);
+      final result = bindings.open_engine_with_path(
+          pathC.pointer(), path.length, engineOut);
       if (result != 0) throw _readError(-result);
       _engine = EngineResource(engineOut.value);
     } finally {
@@ -41,7 +42,7 @@ class Quelle {
 
     try {
       final signedLength =
-          bindings.fetch_novel(_engine.unsafe(), urlC.unsafe());
+          bindings.fetch_novel(_engine.unsafe(), urlC.pointer(), url.length);
       return MemLoc(_engine, signedLength).readAsString();
     } finally {
       urlC.free();
@@ -57,8 +58,8 @@ class Quelle {
     final urlC = Utf8Resource(url.toNativeUtf8());
 
     try {
-      final signedLength =
-          bindings.fetch_chapter_content(_engine.unsafe(), urlC.unsafe());
+      final signedLength = bindings.fetch_chapter_content(
+          _engine.unsafe(), urlC.pointer(), url.length);
       return MemLoc(_engine, signedLength).readAsString();
     } finally {
       urlC.free();
@@ -91,8 +92,8 @@ class Quelle {
     final queryC = Utf8Resource(query.toNativeUtf8());
 
     try {
-      final signedLength =
-          bindings.text_search(_engine.unsafe(), queryC.unsafe(), page);
+      final signedLength = bindings.text_search(
+          _engine.unsafe(), queryC.pointer(), query.length, page);
       return MemLoc(_engine, signedLength).readAsString();
     } finally {
       queryC.free();
@@ -102,7 +103,6 @@ class Quelle {
   QuelleException _readError(int length) {
     final pointer = bindings.last_result();
     final errorMessage = pointer.toDartString(length: length);
-    print(errorMessage);
     calloc.free(pointer);
     return QuelleException(errorMessage);
   }
@@ -143,6 +143,8 @@ class Utf8Resource implements Finalizable {
 
   /// Ensure this [Utf8Resource] stays in scope longer than the inner resource.
   Pointer<Utf8> unsafe() => _cString;
+
+  Pointer<Uint8> pointer() => _cString.cast();
 }
 
 final DynamicLibrary stdlib = DynamicLibrary.process();

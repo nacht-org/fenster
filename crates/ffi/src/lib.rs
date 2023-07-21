@@ -1,12 +1,7 @@
 mod result;
 
-use std::{
-    error::Error,
-    ffi::{c_char, CStr},
-    path::Path,
-};
-
 use quelle_engine::Runner;
+use std::{error::Error, path::Path, slice};
 
 #[derive(thiserror::Error, Debug)]
 enum CustomError {
@@ -15,17 +10,22 @@ enum CustomError {
 }
 
 #[no_mangle]
-pub extern "C" fn open_engine_with_path(path: *const c_char, engine_out: *mut *mut Runner) -> i32 {
+pub extern "C" fn open_engine_with_path(
+    path_ptr: *const u8,
+    path_len: u32,
+    engine_out: *mut *mut Runner,
+) -> i32 {
     env_logger::init();
-    result::capture_error(|| open_engine_with_path_private(path, engine_out))
+    result::capture_error(|| open_engine_with_path_private(path_ptr, path_len, engine_out))
 }
 
 fn open_engine_with_path_private(
-    path: *const c_char,
+    path_ptr: *const u8,
+    path_len: u32,
     engine_out: *mut *mut Runner,
 ) -> Result<(), Box<dyn Error>> {
-    let path = unsafe { CStr::from_ptr(path) };
-    let path = path.to_str()?;
+    let path = unsafe { slice::from_raw_parts(path_ptr, path_len as usize) };
+    let path = std::str::from_utf8(path)?;
 
     let engine = Runner::new(Path::new(path))?;
     let engine = Box::into_raw(Box::new(engine));
@@ -43,9 +43,11 @@ pub extern "C" fn source_meta(engine: *mut Runner) -> i32 {
 }
 
 #[no_mangle]
-pub extern "C" fn fetch_novel(engine: *mut Runner, url: *mut c_char) -> i32 {
+pub extern "C" fn fetch_novel(engine: *mut Runner, url_ptr: *const u8, url_len: u32) -> i32 {
     result::capture_memloc(|| unsafe {
-        let url = CStr::from_ptr(url).to_str()?;
+        let url = slice::from_raw_parts(url_ptr, url_len as usize);
+        let url = std::str::from_utf8(url)?;
+
         let engine = engine.as_mut().ok_or(CustomError::WrongEnginePtr)?;
         let memloc = engine.fetch_novel_memloc(url)?;
         Ok(memloc)
@@ -53,9 +55,15 @@ pub extern "C" fn fetch_novel(engine: *mut Runner, url: *mut c_char) -> i32 {
 }
 
 #[no_mangle]
-pub extern "C" fn fetch_chapter_content(engine: *mut Runner, url: *mut c_char) -> i32 {
+pub extern "C" fn fetch_chapter_content(
+    engine: *mut Runner,
+    url_ptr: *const u8,
+    url_len: u32,
+) -> i32 {
     result::capture_memloc(|| unsafe {
-        let url = CStr::from_ptr(url).to_str()?;
+        let url = slice::from_raw_parts(url_ptr, url_len as usize);
+        let url = std::str::from_utf8(url)?;
+
         let engine = engine.as_mut().ok_or(CustomError::WrongEnginePtr)?;
         let content = engine.fetch_chapter_content_memloc(url)?;
         Ok(content)
@@ -97,9 +105,16 @@ pub extern "C" fn text_search_supported(engine: *mut Runner) -> i32 {
 }
 
 #[no_mangle]
-pub extern "C" fn text_search(engine: *mut Runner, query: *mut c_char, page: i32) -> i32 {
+pub extern "C" fn text_search(
+    engine: *mut Runner,
+    query_ptr: *const u8,
+    query_len: u32,
+    page: i32,
+) -> i32 {
     result::capture_memloc(|| unsafe {
-        let query = CStr::from_ptr(query).to_str()?;
+        let query = slice::from_raw_parts(query_ptr, query_len as usize);
+        let query = std::str::from_utf8(query)?;
+
         let engine = engine.as_mut().ok_or(CustomError::WrongEnginePtr)?;
         let memloc = engine.text_search_memloc(query, page)?;
         Ok(memloc)

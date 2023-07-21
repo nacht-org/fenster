@@ -11,16 +11,17 @@ import '../locator.dart';
 class QuelleBindings {
   late DynamicLibrary quelle;
 
-  late int Function(Pointer<Utf8> path, Pointer<Pointer<Engine>> engine_out)
-      open_engine_with_path;
+  late int Function(Pointer<Uint8> path_ptr, int path_len,
+      Pointer<Pointer<Engine>> engine_out) open_engine_with_path;
 
   late int Function(Pointer<Engine> engine, int ptr, int len) memloc_dealloc;
 
   late int Function(Pointer<Engine> engine) source_meta;
 
-  late int Function(Pointer<Engine> engine, Pointer<Utf8> url) fetch_novel;
+  late int Function(Pointer<Engine> engine, Pointer<Uint8> url_ptr, int url_len)
+      fetch_novel;
 
-  late int Function(Pointer<Engine> engine, Pointer<Utf8> url)
+  late int Function(Pointer<Engine> engine, Pointer<Uint8> url_ptr, int url_len)
       fetch_chapter_content;
 
   late int Function(Pointer<Engine> engine) popular_supported;
@@ -31,7 +32,8 @@ class QuelleBindings {
 
   late int Function(
     Pointer<Engine> engine,
-    Pointer<Utf8> query,
+    Pointer<Uint8> query_ptr,
+    int query_len,
     int page,
   ) text_search;
 
