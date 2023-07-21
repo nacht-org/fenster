@@ -201,3 +201,43 @@ pub fn fetch_chapter_content(url: String) -> Result<String, QuelleError> {
 
     content.as_node().outer_html().map_err(Into::into)
 }
+
+#[expose]
+pub fn popular_url(page: i32) -> String {
+    popular_url_private(page)
+}
+
+pub fn popular_url_private(page: i32) -> String {
+    format!("https://www.novelpub.com/genre/all/popular/all/{page}")
+}
+
+#[expose]
+pub fn popular(page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
+    let url = popular_url_private(page);
+    let response = Request::get(url.clone()).send()?;
+    let doc = kuchiki::parse_html().one(response.text().unwrap());
+
+    let mut novels = vec![];
+    if let Ok(elements) = doc.select(".novel-list > .novel-item") {
+        for item in elements {
+            let a = item.as_node().select_first(".novel-title a");
+            let Ok(a) = a else { continue };
+
+            let novel_url = a.get_attribute("href");
+            let Some(novel_url) = novel_url else { continue };
+
+            let novel = BasicNovel {
+                title: a.get_attribute("title").unwrap_or_default(),
+                cover: item
+                    .as_node()
+                    .select_first(".novel-cover img")
+                    .get_attribute("data-src"),
+                url: META.convert_into_absolute_url(novel_url, Some(&url))?,
+            };
+
+            novels.push(novel);
+        }
+    }
+
+    Ok(novels)
+}
