@@ -185,7 +185,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
 
             info!("Writing to '{}'", &output_path.display());
 
-            bundle::compile_epub(meta, data, path, &mut file)
+            bundle::compile_epub(meta, data, path.to_path_buf(), &mut file)
                 .map_err(|e| anyhow!("failed to bundle epub: {}", e.to_string()))?;
         }
     }

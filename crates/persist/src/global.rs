@@ -1,4 +1,7 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -8,8 +11,8 @@ pub struct Global {
 }
 
 impl Global {
-    pub fn novel_path_by_url(&self, url: &str) -> Option<&PathBuf> {
-        self.novels.get(url)
+    pub fn novel_path_by_url(&self, url: &str) -> Option<&Path> {
+        self.novels.get(url).map(AsRef::as_ref)
     }
 
     pub fn insert_novel(&mut self, key: String, value: PathBuf) {

@@ -1,9 +1,4 @@
-use std::{
-    collections::HashMap,
-    fs::{self, File},
-    io::BufWriter,
-    path::Path,
-};
+use std::{collections::HashMap, fs::File, io::BufWriter, path::Path};
 
 use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
 use indoc::formatdoc;
@@ -11,29 +6,24 @@ use itertools::Itertools;
 use log::{info, warn};
 use quelle_core::prelude::*;
 
-use crate::data::{Bundle, Cover};
+use crate::data::Bundle;
 
-pub fn bundle_epub(
-    bundle: Bundle,
-    base_path: &Path,
+pub fn bundle_epub<B: Bundle>(
+    bundle: B,
     out: &mut BufWriter<File>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let Bundle {
-        meta,
-        novel,
-        cover,
-        chapter_content,
-    } = bundle;
+    let meta = bundle.meta();
+    let novel = bundle.novel();
 
     let mut builder = EpubBuilder::new(ZipLibrary::new()?)?;
 
-    let preface_content = preface_content(&meta, &novel);
+    let preface_content = preface_content(meta, novel);
     let preface = EpubContent::new("preface.xhtml", preface_content.as_bytes())
         .title("Preface")
         .reftype(ReferenceType::Preface);
 
-    if let Some(cover) = cover.as_ref() {
-        set_cover_image(&mut builder, cover)?;
+    if let (Some(path), Some(content_type)) = (bundle.cover_path(), bundle.cover_content_type()) {
+        set_cover_image(&mut builder, path, content_type)?;
     }
 
     builder.metadata("title", &novel.title)?;
@@ -67,13 +57,9 @@ pub fn bundle_epub(
 
     for volume in &novel.volumes {
         for chapter in &volume.chapters {
-            let file_name = format!("chapters/{}.xhtml", &chapter.index,);
+            let file_name = format!("chapters/{}.xhtml", &chapter.index);
 
-            let content = if let Some(file_path) = chapter_content.get(&chapter.url) {
-                let file_path = base_path.join(file_path);
-                let content = fs::read_to_string(&file_path)?;
-
-                info!("Read chapter content from '{}'.", file_path.display());
+            let content = if let Some(content) = bundle.chapter_content(&chapter.url)? {
                 prepare_content(&chapter, content)
             } else {
                 warn!("Using placeholder content for '{}'.", file_name);
@@ -110,18 +96,18 @@ pub fn empty_content(chapter: &Chapter) -> String {
 
 fn set_cover_image(
     builder: &mut EpubBuilder<ZipLibrary>,
-    cover: &Cover,
+    cover_path: &Path,
+    content_type: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if cover.path.exists() {
-        let file = File::open(&cover.path)?;
-        let name = cover
-            .path
+    if cover_path.exists() {
+        let file = File::open(cover_path)?;
+        let name = cover_path
             .file_name()
             .map(|name| name.to_string_lossy().to_string())
             .unwrap_or_else(|| String::from("cover.unknwon"));
 
-        builder.add_cover_image(name, file, &cover.content_type)?;
-        info!("Written cover file '{}'", cover.path.display());
+        builder.add_cover_image(name, file, content_type)?;
+        info!("Written cover file '{}'", cover_path.display());
     } else {
         warn!("The cover file could not be found.");
     }
@@ -137,7 +123,7 @@ fn capitalize(s: &str) -> String {
     }
 }
 
-pub fn preface_content(_meta: &Option<Meta>, novel: &Novel) -> String {
+pub fn preface_content(_meta: Option<&Meta>, novel: &Novel) -> String {
     let title = &novel.title;
     let url = &novel.url;
 
