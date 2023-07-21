@@ -18,7 +18,7 @@ class Quelle {
 
     try {
       final result = bindings.open_engine_with_path(pathC.unsafe(), engineOut);
-      if (result != 0) throw _readError();
+      if (result != 0) throw _readError(-result);
       _engine = EngineResource(engineOut.value);
     } finally {
       calloc.free(engineOut);
@@ -67,7 +67,7 @@ class Quelle {
 
   bool popularSupported() {
     final result = bindings.popular_supported(_engine.unsafe());
-    if (result < 0) throw _readError();
+    if (result < 0) throw _readError(-result);
     return result > 0;
   }
 
@@ -83,7 +83,7 @@ class Quelle {
 
   bool textSearchSupported() {
     final result = bindings.text_search_supported(_engine.unsafe());
-    if (result < 0) throw _readError();
+    if (result < 0) throw _readError(-result);
     return result > 0;
   }
 
@@ -99,13 +99,11 @@ class Quelle {
     }
   }
 
-  QuelleException _readError() {
-    Pointer<Pointer<Utf8>> buffer = calloc();
-    bindings.last_error_message(buffer);
-    final errorMessage = buffer.value.toDartString();
+  QuelleException _readError(int length) {
+    final pointer = bindings.last_result();
+    final errorMessage = pointer.toDartString(length: length);
     print(errorMessage);
-    calloc.free(buffer.value);
-    calloc.free(buffer);
+    calloc.free(pointer);
     return QuelleException(errorMessage);
   }
 }

@@ -1,4 +1,8 @@
-use std::{cell::RefCell, error, mem, ptr};
+use std::{
+    cell::RefCell,
+    error::{self, Error},
+    mem, ptr,
+};
 
 use quelle_engine::MemLoc;
 
@@ -64,6 +68,13 @@ pub fn capture_memloc(f: impl Fn() -> Result<MemLoc, Box<dyn error::Error>>) -> 
 pub fn capture_error(f: impl Fn() -> Result<(), Box<dyn error::Error>>) -> i32 {
     match f() {
         Ok(()) => 0,
+        Err(e) => -(set_last_result(e.to_string().into_bytes()) as i32),
+    }
+}
+
+pub fn capture_error_with_return(f: impl Fn() -> Result<i32, Box<dyn Error>>) -> i32 {
+    match f() {
+        Ok(v) => v,
         Err(e) => -(set_last_result(e.to_string().into_bytes()) as i32),
     }
 }

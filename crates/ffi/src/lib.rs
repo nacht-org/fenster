@@ -1,4 +1,3 @@
-mod error;
 mod result;
 
 use std::{
@@ -18,7 +17,7 @@ enum CustomError {
 #[no_mangle]
 pub extern "C" fn open_engine_with_path(path: *const c_char, engine_out: *mut *mut Runner) -> i32 {
     env_logger::init();
-    error::capture_error(|| open_engine_with_path_private(path, engine_out))
+    result::capture_error(|| open_engine_with_path_private(path, engine_out))
 }
 
 fn open_engine_with_path_private(
@@ -65,7 +64,7 @@ pub extern "C" fn fetch_chapter_content(engine: *mut Runner, url: *mut c_char) -
 
 #[no_mangle]
 pub extern "C" fn popular_supported(engine: *mut Runner) -> i32 {
-    error::capture_error_with_return(|| {
+    result::capture_error_with_return(|| {
         let engine = unsafe { engine.as_mut().ok_or(CustomError::WrongEnginePtr)? };
         Ok(engine.popular_supported() as i32)
     })
@@ -91,7 +90,7 @@ pub extern "C" fn popular(engine: *mut Runner, page: i32) -> i32 {
 
 #[no_mangle]
 pub extern "C" fn text_search_supported(engine: *mut Runner) -> i32 {
-    error::capture_error_with_return(|| {
+    result::capture_error_with_return(|| {
         let engine = unsafe { engine.as_ref().ok_or(CustomError::WrongEnginePtr)? };
         Ok(engine.text_search_supported() as i32)
     })
