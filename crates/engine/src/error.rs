@@ -28,6 +28,9 @@ pub enum Error {
     #[error("{0}")]
     Utf8Error(#[from] FromUtf8Error),
 
+    #[error("wasm memory access error")]
+    MemoryAccessError,
+
     #[error("{0}")]
     Other(#[from] anyhow::Error),
 }

@@ -129,15 +129,11 @@ impl Runner {
     }
 
     pub fn meta(&mut self) -> Result<Meta, crate::error::Error> {
-        let ptr = self.functions.meta.call(&mut self.store, ())?;
-
-        let bytes = self.read_bytes(ptr)?;
-        let meta = serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError)?;
-
-        let len = bytes.len() as i32;
-        self.dealloc_memory(ptr, len)?;
-
-        Ok(meta)
+        let memloc = unsafe { self.meta_memloc()? };
+        let bytes = self.read_bytes_with_len(memloc.offset, memloc.len as usize);
+        let meta = serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError);
+        self.dealloc_memory(memloc.offset, memloc.len)?;
+        meta
     }
 
     pub unsafe fn meta_memloc(&mut self) -> error::Result<MemLoc> {
@@ -365,13 +361,12 @@ impl Runner {
     }
 
     fn write_string(&mut self, value: &str) -> crate::error::Result<i32> {
-        // length of the string with trailing null byte
         let ptr = self.alloc_memory(value.len() as i32)?;
         self.stack_push(value.len() as i32)?;
 
         self.memory
             .write(&mut self.store, ptr as usize, value.as_bytes())
-            .unwrap();
+            .map_err(|_| Error::MemoryAccessError)?;
 
         Ok(ptr)
     }
