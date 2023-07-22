@@ -29,6 +29,9 @@ pub enum ParseError {
 
     #[error("failed to parse int from str")]
     ParseIntError,
+
+    #[error("{0}")]
+    Other(String),
 }
 
 impl From<ParseIntError> for QuelleError {

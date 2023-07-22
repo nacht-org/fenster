@@ -11,6 +11,7 @@ members = [
     "extensions/novelpub",
     "extensions/royalroad",
     "extensions/creativenovels",
+    "extensions/scribblehub",
     "clients/cli",
 ]
 
