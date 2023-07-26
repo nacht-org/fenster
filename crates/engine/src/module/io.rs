@@ -1,9 +1,9 @@
 use log::trace;
 use wasmtime::Caller;
 
-use crate::{module::utils::read_str_with_len, Data};
+use crate::module::utils::read_str_with_len;
 
-pub fn print(mut caller: Caller<'_, Data>, ptr: i32, len: u32) {
+pub fn print<D>(mut caller: Caller<'_, D>, ptr: i32, len: u32) {
     trace!("executing exposed function 'print'");
 
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
@@ -11,7 +11,7 @@ pub fn print(mut caller: Caller<'_, Data>, ptr: i32, len: u32) {
     print!("{string}");
 }
 
-pub fn eprint(mut caller: Caller<'_, Data>, ptr: i32, len: u32) {
+pub fn eprint<D>(mut caller: Caller<'_, D>, ptr: i32, len: u32) {
     trace!("executing exposed function 'eprint'");
 
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
@@ -19,7 +19,7 @@ pub fn eprint(mut caller: Caller<'_, Data>, ptr: i32, len: u32) {
     eprint!("{string}");
 }
 
-pub fn trace(mut caller: Caller<'_, Data>, ptr: i32, len: u32) {
+pub fn trace<D>(mut caller: Caller<'_, D>, ptr: i32, len: u32) {
     trace!("executing exposed function 'trace'");
 
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();

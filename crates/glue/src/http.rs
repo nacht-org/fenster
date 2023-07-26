@@ -1,9 +1,9 @@
 use quelle_core::prelude::*;
 
-use crate::prelude::{FromWasmAbi, ToWasmAbi};
+use crate::prelude::FromWasmAbi;
 
 extern "C" {
-    fn http_send_request(ptr: *mut u8) -> *mut u8;
+    fn http_send_request(ptr: *const u8, len: u32) -> *mut u8;
 }
 
 pub fn send_request(request: Request) -> Result<Response, BoxedRequestError> {
@@ -14,10 +14,8 @@ pub fn send_request(request: Request) -> Result<Response, BoxedRequestError> {
     })?;
 
     let resp = unsafe {
-        let ptr = http_send_request(req.to_wasm_abi());
+        let ptr = http_send_request(req.as_ptr(), req.len() as u32);
         let resp = String::from_wasm_abi(ptr);
-
-        println!("{resp}");
 
         let resp = serde_json::from_str::<Result<Response, RequestError>>(&resp).map_err(|_| {
             RequestError {

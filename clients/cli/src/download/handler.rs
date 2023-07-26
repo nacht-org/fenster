@@ -8,7 +8,7 @@ use std::{
 use anyhow::bail;
 use log::info;
 use quelle_core::prelude::{Chapter, ExtensionConfig, Meta};
-use quelle_engine::Runner;
+use quelle_engine::{data::DefaultImpl, Runtime};
 use quelle_persist::{CoverLoc, EventKind, EventLog, Persist, PersistNovel, SavedNovel};
 use reqwest::{blocking::Client, header::CONTENT_TYPE};
 use url::Url;
@@ -16,7 +16,7 @@ use url::Url;
 use super::DownloadOptions;
 
 pub struct DownloadHandler<'a> {
-    pub runner: Runner,
+    pub runner: Runtime<DefaultImpl>,
     pub meta: Meta,
     pub persist_novel: PersistNovel<'a>,
     pub data: SavedNovel,
@@ -31,7 +31,7 @@ impl<'a> DownloadHandler<'a> {
         wasm_path: PathBuf,
         options: DownloadOptions,
     ) -> anyhow::Result<Self> {
-        let mut runner = Runner::new(&wasm_path)?;
+        let mut runner = Runtime::new(&wasm_path)?;
         runner.setup(&ExtensionConfig {
             level_filter: log::LevelFilter::Info,
         })?;
@@ -104,7 +104,7 @@ impl<'a> DownloadHandler<'a> {
     }
 
     fn download_chapters(
-        runner: &mut Runner,
+        runner: &mut Runtime<DefaultImpl>,
         persist_novel: &PersistNovel<'a>,
         data: &SavedNovel,
         log: &mut EventLog,

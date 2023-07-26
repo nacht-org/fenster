@@ -1,69 +1,58 @@
+pub mod data;
 pub mod error;
-mod module;
+pub mod module;
 
+use data::DefaultImpl;
 use error::Error;
 use log::info;
 use quelle_core::prelude::*;
-use reqwest::blocking::Client;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{path::Path, slice};
 use wasmtime::*;
 
-pub struct Data {
-    client: Client,
+type SendRequestFn<D> = fn(caller: Caller<'_, D>, ptr: i32, len: i32) -> i32;
+
+type LogFn<D> = fn(caller: Caller<'_, D>, ptr: i32, len: i32);
+
+pub struct RuntimeBuilder<D> {
+    send_request: Option<SendRequestFn<D>>,
+    log: Option<LogFn<D>>,
 }
 
-#[allow(dead_code)]
-pub struct Runner {
-    engine: Engine,
-    module: Module,
-    store: Store<Data>,
-    instance: Instance,
-    memory: Memory,
-    functions: Functions,
+impl<D> Default for RuntimeBuilder<D> {
+    fn default() -> Self {
+        Self {
+            send_request: Default::default(),
+            log: Default::default(),
+        }
+    }
 }
 
-struct Functions {
-    // Memory
-    alloc: TypedFunc<i32, i32>,
-    dealloc: TypedFunc<(i32, i32), ()>,
+impl<D: 'static> RuntimeBuilder<D> {
+    pub fn send_request(mut self, f: SendRequestFn<D>) -> Self {
+        self.send_request = Some(f);
+        self
+    }
 
-    // Stack
-    stack_push: TypedFunc<i32, ()>,
-    stack_pop: TypedFunc<(), i32>,
+    pub fn log(mut self, f: LogFn<D>) -> Self {
+        self.log = Some(f);
+        self
+    }
 
-    // Result
-    last_result: TypedFunc<(), i32>,
-
-    // User
-    setup: Option<TypedFunc<i32, ()>>,
-    setup_default: TypedFunc<i32, ()>,
-    meta: TypedFunc<(), i32>,
-    fetch_novel: TypedFunc<i32, i32>,
-    fetch_chapter_content: TypedFunc<i32, i32>,
-    text_search: Option<TypedFunc<(i32, i32), i32>>,
-    popular_url: Option<TypedFunc<i32, i32>>,
-    popular: Option<TypedFunc<i32, i32>>,
-}
-
-impl Runner {
-    pub fn new(path: &Path) -> crate::error::Result<Self> {
+    pub fn build(self, path: &Path, data: D) -> error::Result<Runtime<D>> {
         let engine = Engine::default();
-        let mut linker: Linker<Data> = Linker::new(&engine);
+        let mut linker: Linker<D> = Linker::new(&engine);
         let module = Module::from_file(&engine, path)?;
 
-        linker.func_wrap("env", "http_send_request", module::http::send_request)?;
+        let send_request = self.send_request.unwrap_or(module::http::send_request_noop);
+        linker.func_wrap("env", "http_send_request", send_request)?;
+
+        let log_event = self.log.unwrap_or(module::log::event);
+        linker.func_wrap("env", "log_event", log_event)?;
+
         linker.func_wrap("env", "io_print", module::io::print)?;
         linker.func_wrap("env", "io_eprint", module::io::eprint)?;
         linker.func_wrap("env", "io_trace", module::io::trace)?;
-        linker.func_wrap("env", "log_event", module::log::event)?;
-
-        let data = Data {
-            client: Client::builder()
-                .user_agent("Mozilla/5.0 (X11; Fedora; Linux x86_64; rv:107.0) Gecko/20100101 Firefox/107.0")
-                .build()
-                .unwrap(),
-        };
 
         let mut store = Store::new(&engine, data);
 
@@ -106,7 +95,7 @@ impl Runner {
             popular: get_func_optional!("popular"),
         };
 
-        Ok(Self {
+        Ok(Runtime {
             engine,
             module,
             store,
@@ -114,6 +103,61 @@ impl Runner {
             memory,
             functions,
         })
+    }
+}
+
+#[allow(dead_code)]
+pub struct Runtime<D> {
+    engine: Engine,
+    module: Module,
+    store: Store<D>,
+    instance: Instance,
+    memory: Memory,
+    functions: Functions,
+}
+
+struct Functions {
+    // Memory
+    alloc: TypedFunc<i32, i32>,
+    dealloc: TypedFunc<(i32, i32), ()>,
+
+    // Stack
+    stack_push: TypedFunc<i32, ()>,
+    stack_pop: TypedFunc<(), i32>,
+
+    // Result
+    last_result: TypedFunc<(), i32>,
+
+    // User
+    setup: Option<TypedFunc<i32, ()>>,
+    setup_default: TypedFunc<i32, ()>,
+    meta: TypedFunc<(), i32>,
+    fetch_novel: TypedFunc<i32, i32>,
+    fetch_chapter_content: TypedFunc<i32, i32>,
+    text_search: Option<TypedFunc<(i32, i32), i32>>,
+    popular_url: Option<TypedFunc<i32, i32>>,
+    popular: Option<TypedFunc<i32, i32>>,
+}
+
+impl Runtime<DefaultImpl> {
+    pub fn new(path: &Path) -> crate::error::Result<Self> {
+        let data = DefaultImpl {
+            client: reqwest::blocking::Client::builder()
+                .user_agent("Mozilla/5.0 (X11; Fedora; Linux x86_64; rv:107.0) Gecko/20100101 Firefox/107.0")
+                .build()
+                .unwrap(),
+        };
+
+        RuntimeBuilder::default()
+            .send_request(module::http::send_request)
+            .build(path, data)
+    }
+}
+
+impl<D> Runtime<D> {
+    #[inline]
+    pub fn builder() -> RuntimeBuilder<D> {
+        RuntimeBuilder::default()
     }
 
     /// Call the extension's setup function

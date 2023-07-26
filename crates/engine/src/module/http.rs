@@ -3,16 +3,20 @@ use quelle_core::prelude::{Body, Request, RequestError, RequestErrorKind, Respon
 use wasmtime::Caller;
 
 use crate::{
-    module::utils::{read_str, write_str},
-    Data,
+    data::DefaultImpl,
+    module::utils::{read_str_with_len, write_str},
 };
 
-pub fn send_request(mut caller: Caller<'_, Data>, ptr: i32) -> i32 {
+pub fn send_request_noop<D>(caller: Caller<'_, D>, ptr: i32, len: i32) -> i32 {
+    0
+}
+
+pub fn send_request(mut caller: Caller<'_, DefaultImpl>, ptr: i32, len: i32) -> i32 {
     trace!("executing exposed function 'ext_send_request'");
 
     let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
 
-    let request_data = read_str(&mut caller, &memory, ptr);
+    let request_data = read_str_with_len(&mut caller, &memory, ptr, len as usize);
     let request_data = serde_json::from_str::<Request>(request_data).unwrap();
     debug!("Sending http request: {request_data:?}.");
 

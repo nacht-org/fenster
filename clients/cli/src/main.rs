@@ -17,7 +17,7 @@ use clap::{Parser, Subcommand};
 use download::DownloadOptions;
 use lock::Lock;
 use log::{info, warn};
-use quelle_engine::Runner;
+use quelle_engine::Runtime;
 use quelle_persist::{create_parent_all, Persist, PersistOptions};
 use simplelog::{Config, LevelFilter, TermLogger};
 use url::Url;
@@ -155,7 +155,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 exit(1);
             };
 
-            let mut runner = Runner::new(Path::new(&extension.path))?;
+            let mut runner = Runtime::new(Path::new(&extension.path))?;
             let meta = runner.meta()?;
 
             if !runner.popular_supported() {
@@ -191,7 +191,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                     bail!("The wasm extension file could not be found");
                 }
 
-                let mut runner = Runner::new(path)?;
+                let mut runner = Runtime::new(path)?;
                 let meta = runner.meta()?;
                 info!("Acquired source meta information from wasm file.");
 

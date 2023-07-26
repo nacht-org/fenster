@@ -1,6 +1,6 @@
 use log::{trace, LevelFilter};
 use quelle_core::prelude::ExtensionConfig;
-use quelle_engine::Runner;
+use quelle_engine::Runtime;
 use std::{error, path::Path};
 
 fn main() -> Result<(), Box<dyn error::Error>> {
@@ -11,7 +11,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         .init();
 
     trace!("initializing the wasm engine...");
-    let mut runner = Runner::new(Path::new("extensions/extension_royalroad.wasm"))?;
+    let mut runner = Runtime::new(Path::new("extensions/extension_royalroad.wasm"))?;
 
     let memloc = unsafe { runner.meta_memloc() }?;
     println!("{:?}", &memloc);

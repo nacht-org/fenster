@@ -17,6 +17,7 @@ members = [
 
 [workspace.dependencies]
 log = { version = "0.4.17" }
+wasmtime = "11.0.1"
 
 [workspace.dependencies.chrono]
 version = "0.4.22"

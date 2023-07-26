@@ -6,8 +6,8 @@ use std::{
 };
 
 use anyhow::{anyhow, bail};
-use quelle_engine::Runner;
 use log::{debug, info};
+use quelle_engine::Runtime;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -38,7 +38,7 @@ pub fn lock(dir: PathBuf) -> anyhow::Result<()> {
         }
 
         info!("collecting meta info from '{}'...", path.display());
-        let mut runner = Runner::new(&path).map_err(|e| anyhow!(e.to_string()))?;
+        let mut runner = Runtime::new(&path).map_err(|e| anyhow!(e.to_string()))?;
         let meta = runner.meta().map_err(|e| anyhow!(e.to_string()))?;
 
         if let Some(Extension { name, .. }) = extensions.get(&meta.id) {

@@ -6,7 +6,7 @@ use std::{fs::File, io::BufReader, path::PathBuf};
 use clap::{Parser, Subcommand};
 use lock::Lock;
 use quelle_core::prelude::ExtensionConfig;
-use quelle_engine::Runner;
+use quelle_engine::Runtime;
 use simplelog::{Config, LevelFilter, TermLogger};
 use url::Url;
 
@@ -116,7 +116,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 level_filter: level,
             };
 
-            let mut runner = Runner::new(&path)?;
+            let mut runner = Runtime::new(&path)?;
             runner.setup(&config)?;
 
             if meta {
