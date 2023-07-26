@@ -1,3 +1,5 @@
+use std::future::Future;
+
 use log::{debug, trace};
 use quelle_core::prelude::{Body, Request, RequestError, RequestErrorKind, Response};
 use wasmtime::Caller;
@@ -7,41 +9,51 @@ use crate::{
     module::utils::{read_str_with_len, write_str},
 };
 
-pub fn send_request_noop<D>(caller: Caller<'_, D>, ptr: i32, len: i32) -> i32 {
-    0
+pub fn send_request_noop<'a, D>(
+    _caller: Caller<'a, D>,
+    _ptr: i32,
+    _len: i32,
+) -> Box<dyn Future<Output = i32> + Send> {
+    Box::new(async move { 0 })
 }
 
-pub fn send_request(mut caller: Caller<'_, DefaultImpl>, ptr: i32, len: i32) -> i32 {
-    trace!("executing exposed function 'ext_send_request'");
+pub fn send_request<'a>(
+    mut caller: Caller<'a, DefaultImpl>,
+    ptr: i32,
+    len: i32,
+) -> Box<dyn Future<Output = i32> + Send + 'a> {
+    Box::new(async move {
+        trace!("executing exposed function 'ext_send_request'");
 
-    let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
+        let memory = caller.get_export("memory").unwrap().into_memory().unwrap();
 
-    let request_data = read_str_with_len(&mut caller, &memory, ptr, len as usize);
-    let request_data = serde_json::from_str::<Request>(request_data).unwrap();
-    debug!("Sending http request: {request_data:?}.");
+        let request_data = read_str_with_len(&mut caller, &memory, ptr, len as usize);
+        let request_data = serde_json::from_str::<Request>(request_data).unwrap();
+        debug!("Sending http request: {request_data:?}.");
 
-    let client = &caller.data().client;
-    let mut request = client.request(request_data.method.into(), &request_data.url);
-    if let Some(body) = request_data.data {
-        match body {
-            Body::Form(data) => {
-                let mut multipart = reqwest::blocking::multipart::Form::new();
-                for (name, value) in data {
-                    multipart = multipart.text(name, value);
+        let client = &caller.data().client;
+        let mut request = client.request(request_data.method.into(), &request_data.url);
+        if let Some(body) = request_data.data {
+            match body {
+                Body::Form(data) => {
+                    let mut multipart = reqwest::multipart::Form::new();
+                    for (name, value) in data {
+                        multipart = multipart.text(name, value);
+                    }
+                    request = request.multipart(multipart);
                 }
-                request = request.multipart(multipart);
-            }
-        };
-    }
+            };
+        }
 
-    let response = parse_response(request.send());
-    let json = serde_json::to_string(&response).unwrap();
+        let response = parse_response(request.send().await).await;
+        let json = serde_json::to_string(&response).unwrap();
 
-    write_str(&mut caller, &memory, json.as_str())
+        write_str(&mut caller, &memory, json.as_str()).await
+    })
 }
 
-fn parse_response(
-    response: reqwest::Result<reqwest::blocking::Response>,
+async fn parse_response(
+    response: reqwest::Result<reqwest::Response>,
 ) -> Result<Response, RequestError> {
     let response = response?;
     let header_map = response
@@ -58,7 +70,7 @@ fn parse_response(
 
     Ok(Response {
         status: response.status().as_u16() as usize,
-        body: response.bytes().map(|data| data.to_vec()).ok(),
+        body: response.bytes().await.map(|data| data.to_vec()).ok(),
         headers: Some(headers),
     })
 }

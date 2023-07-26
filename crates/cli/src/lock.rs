@@ -25,7 +25,7 @@ pub struct Extension {
     pub path: String,
 }
 
-pub fn lock(dir: PathBuf) -> anyhow::Result<()> {
+pub async fn lock(dir: PathBuf) -> anyhow::Result<()> {
     let mut extensions = HashMap::new();
 
     for entry in fs::read_dir(&dir)? {
@@ -38,8 +38,11 @@ pub fn lock(dir: PathBuf) -> anyhow::Result<()> {
         }
 
         info!("collecting meta info from '{}'...", path.display());
-        let mut runner = Runtime::new(&path).map_err(|e| anyhow!(e.to_string()))?;
-        let meta = runner.meta().map_err(|e| anyhow!(e.to_string()))?;
+        let mut runner = Runtime::new(&path)
+            .await
+            .map_err(|e| anyhow!(e.to_string()))?;
+
+        let meta = runner.meta().await.map_err(|e| anyhow!(e.to_string()))?;
 
         if let Some(Extension { name, .. }) = extensions.get(&meta.id) {
             bail!("both '{}' and '{}' have the same id", name, &meta.name);

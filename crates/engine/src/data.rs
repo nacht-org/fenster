@@ -1,3 +1,3 @@
 pub struct DefaultImpl {
-    pub client: reqwest::blocking::Client,
+    pub client: reqwest::Client,
 }

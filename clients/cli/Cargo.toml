@@ -9,11 +9,13 @@ edition = "2021"
 anyhow = "1.0.66"
 chrono = "0.4.23"
 clap = { version = "4.0.26", features = ["derive"] }
-quelle_bundle = { version = "0.1.0", path = "../../crates/bundle", features = ["persist"] }
+quelle_bundle = { version = "0.1.0", path = "../../crates/bundle", features = [
+    "persist",
+] }
 quelle_core = { version = "0.1.0", path = "../../crates/core" }
 quelle_engine = { version = "0.1.0", path = "../../crates/engine" }
 quelle_persist = { version = "0.1.0", path = "../../crates/persist" }
-itertools = "0.10.5"
+itertools = "0.11.0"
 log = "0.4.17"
 mime_guess = "2.0.4"
 reqwest = { version = "0.11.13", features = ["blocking"] }
@@ -23,3 +25,4 @@ simplelog = "0.12.0"
 slug = "0.1.4"
 toml = "0.7.2"
 url = "2.3.1"
+tokio = { workspace = true }

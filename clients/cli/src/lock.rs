@@ -45,7 +45,7 @@ impl Lock {
         Ok(None)
     }
 
-    pub fn generate(extensions_dir: &Path) -> anyhow::Result<Self> {
+    pub async fn generate(extensions_dir: &Path) -> anyhow::Result<Self> {
         let mut extensions = HashMap::new();
 
         for entry in fs::read_dir(extensions_dir)? {
@@ -58,8 +58,11 @@ impl Lock {
             }
 
             info!("Reading meta info from '{}'...", path.display());
-            let mut runner = Runtime::new(&path).map_err(|e| anyhow!(e.to_string()))?;
-            let meta = runner.meta().map_err(|e| anyhow!(e.to_string()))?;
+            let mut runner = Runtime::new(&path)
+                .await
+                .map_err(|e| anyhow!(e.to_string()))?;
+
+            let meta = runner.meta().await.map_err(|e| anyhow!(e.to_string()))?;
 
             if let Some(Extension { name, .. }) = extensions.get(&meta.id) {
                 bail!("Both '{}' and '{}' have the same id", name, &meta.name);

@@ -18,6 +18,7 @@ members = [
 [workspace.dependencies]
 log = { version = "0.4.17" }
 wasmtime = "11.0.1"
+tokio = { version = "1.29.1", features = ["full"] }
 
 [workspace.dependencies.chrono]
 version = "0.4.22"

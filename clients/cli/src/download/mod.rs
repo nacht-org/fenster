@@ -12,7 +12,7 @@ use crate::args::CoverAction;
 
 use self::handler::DownloadHandler;
 
-pub fn download(
+pub async fn download(
     persist: Persist,
     url: Url,
     wasm_path: PathBuf,
@@ -21,7 +21,7 @@ pub fn download(
     let mut global = persist.read_global()?;
 
     let url_string = url.to_string();
-    let mut handler = DownloadHandler::new(&persist, url, wasm_path, options)?;
+    let mut handler = DownloadHandler::new(&persist, url, wasm_path, options).await?;
     handler.save()?;
 
     match &handler.options.cover {
@@ -37,7 +37,7 @@ pub fn download(
     global.insert_novel(url_string, handler.persist_novel.dir().to_path_buf());
     persist.save_global(&global)?;
 
-    handler.download()?;
+    handler.download().await?;
     handler.save()?;
 
     Ok(handler.data)

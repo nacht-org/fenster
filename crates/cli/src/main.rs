@@ -83,7 +83,8 @@ enum Commands {
     },
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     let level = match cli.verbose {
@@ -116,27 +117,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 level_filter: level,
             };
 
-            let mut runner = Runtime::new(&path)?;
-            runner.setup(&config)?;
+            let mut runner = Runtime::new(&path).await?;
+            runner.setup(&config).await?;
 
             if meta {
-                let meta = runner.meta()?;
+                let meta = runner.meta().await?;
                 println!("{meta:#?}");
             }
 
             if let Some(url) = novel {
-                let novel = runner.fetch_novel(url.as_str())?;
+                let novel = runner.fetch_novel(url.as_str()).await?;
                 println!("{novel:#?}");
             }
 
             if let Some(url) = content {
-                let content = runner.fetch_chapter_content(url.as_str())?;
+                let content = runner.fetch_chapter_content(url.as_str()).await?;
                 println!("{content:#?}");
             }
 
             if let Some(query) = query {
                 if runner.text_search_supported() {
-                    let result = runner.text_search(&query, page)?;
+                    let result = runner.text_search(&query, page).await?;
                     for item in result {
                         println!("{item:?}");
                     }
@@ -147,10 +148,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             if popular {
                 if runner.popular_supported() {
-                    let url = runner.popular_url(page)?;
+                    let url = runner.popular_url(page).await?;
                     println!("{url}");
 
-                    let result = runner.popular(page)?;
+                    let result = runner.popular(page).await?;
                     for item in result {
                         println!("{item:?}");
                     }
@@ -182,7 +183,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             build::build(extension, out, release)?;
         }
         Commands::Lock { dir } => {
-            lock::lock(dir)?;
+            lock::lock(dir).await?;
         }
     }
 

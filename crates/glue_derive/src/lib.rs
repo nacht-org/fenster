@@ -48,7 +48,7 @@ impl Parse for Expose {
         let params = if content.is_empty() {
             None
         } else {
-            Some(content.parse_terminated(FnArg::parse)?)
+            Some(content.parse_terminated(FnArg::parse, Token![,])?)
         };
 
         let rtype = input.parse()?;

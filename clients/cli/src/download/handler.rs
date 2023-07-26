@@ -25,23 +25,25 @@ pub struct DownloadHandler<'a> {
 }
 
 impl<'a> DownloadHandler<'a> {
-    pub fn new(
+    pub async fn new(
         persist: &'a Persist,
         url: Url,
         wasm_path: PathBuf,
         options: DownloadOptions,
-    ) -> anyhow::Result<Self> {
-        let mut runner = Runtime::new(&wasm_path)?;
-        runner.setup(&ExtensionConfig {
-            level_filter: log::LevelFilter::Info,
-        })?;
+    ) -> anyhow::Result<DownloadHandler<'a>> {
+        let mut runner = Runtime::new(&wasm_path).await?;
+        runner
+            .setup(&ExtensionConfig {
+                level_filter: log::LevelFilter::Info,
+            })
+            .await?;
 
-        let novel = runner.fetch_novel(url.as_str())?;
+        let novel = runner.fetch_novel(url.as_str()).await?;
         if novel.title.is_empty() {
             bail!("The novel title cannot be empty");
         }
 
-        let meta = runner.meta()?;
+        let meta = runner.meta().await?;
 
         let persist_novel = persist.persist_novel(persist.novel_path(&meta, &novel.title));
         let data = persist_novel
@@ -71,7 +73,7 @@ impl<'a> DownloadHandler<'a> {
         Ok(())
     }
 
-    pub fn download(&mut self) -> anyhow::Result<()> {
+    pub async fn download(&mut self) -> anyhow::Result<()> {
         let chapter_dir = self.persist_novel.chapters_dir();
         if !chapter_dir.exists() {
             fs::create_dir_all(&chapter_dir)?;
@@ -98,12 +100,13 @@ impl<'a> DownloadHandler<'a> {
             &chapters,
             self.persist_novel.dir(),
             &self.options,
-        )?;
+        )
+        .await?;
 
         Ok(())
     }
 
-    fn download_chapters(
+    async fn download_chapters(
         runner: &mut Runtime<DefaultImpl>,
         persist_novel: &PersistNovel<'a>,
         data: &SavedNovel,
@@ -123,7 +126,7 @@ impl<'a> DownloadHandler<'a> {
                 thread::sleep(*delay);
             }
 
-            let content = runner.fetch_chapter_content(&chapter.url)?;
+            let content = runner.fetch_chapter_content(&chapter.url).await?;
             let path = persist_novel.save_chapter(chapter, content)?;
 
             info!("Downloaded '{}' to '{}'.", &chapter.title, path.display());

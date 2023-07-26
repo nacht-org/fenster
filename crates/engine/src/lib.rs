@@ -7,10 +7,11 @@ use error::Error;
 use log::info;
 use quelle_core::prelude::*;
 use serde::{de::DeserializeOwned, Serialize};
-use std::{path::Path, slice};
+use std::{future::Future, path::Path, slice};
 use wasmtime::*;
 
-type SendRequestFn<D> = fn(caller: Caller<'_, D>, ptr: i32, len: i32) -> i32;
+type SendRequestFn<D> =
+    fn(caller: Caller<'_, D>, ptr: i32, len: i32) -> Box<dyn Future<Output = i32> + Send + '_>;
 
 type LogFn<D> = fn(caller: Caller<'_, D>, ptr: i32, len: i32);
 
@@ -28,7 +29,7 @@ impl<D> Default for RuntimeBuilder<D> {
     }
 }
 
-impl<D: 'static> RuntimeBuilder<D> {
+impl<D: Send + 'static> RuntimeBuilder<D> {
     pub fn send_request(mut self, f: SendRequestFn<D>) -> Self {
         self.send_request = Some(f);
         self
@@ -39,13 +40,17 @@ impl<D: 'static> RuntimeBuilder<D> {
         self
     }
 
-    pub fn build(self, path: &Path, data: D) -> error::Result<Runtime<D>> {
-        let engine = Engine::default();
+    pub async fn build(self, path: &Path, data: D) -> error::Result<Runtime<D>> {
+        let mut config = Config::new();
+        config.async_support(true);
+        // config.consume_fuel(true);
+
+        let engine = Engine::new(&config)?;
         let mut linker: Linker<D> = Linker::new(&engine);
         let module = Module::from_file(&engine, path)?;
 
         let send_request = self.send_request.unwrap_or(module::http::send_request_noop);
-        linker.func_wrap("env", "http_send_request", send_request)?;
+        linker.func_wrap2_async("env", "http_send_request", send_request)?;
 
         let log_event = self.log.unwrap_or(module::log::event);
         linker.func_wrap("env", "log_event", log_event)?;
@@ -56,7 +61,7 @@ impl<D: 'static> RuntimeBuilder<D> {
 
         let mut store = Store::new(&engine, data);
 
-        let instance = linker.instantiate(&mut store, &module)?;
+        let instance = linker.instantiate_async(&mut store, &module).await?;
         let memory = instance
             .get_memory(&mut store, "memory")
             .ok_or(anyhow::format_err!("failed to find `memory` export"))?;
@@ -140,9 +145,9 @@ struct Functions {
 }
 
 impl Runtime<DefaultImpl> {
-    pub fn new(path: &Path) -> crate::error::Result<Self> {
+    pub async fn new(path: &Path) -> crate::error::Result<Self> {
         let data = DefaultImpl {
-            client: reqwest::blocking::Client::builder()
+            client: reqwest::Client::builder()
                 .user_agent("Mozilla/5.0 (X11; Fedora; Linux x86_64; rv:107.0) Gecko/20100101 Firefox/107.0")
                 .build()
                 .unwrap(),
@@ -151,73 +156,99 @@ impl Runtime<DefaultImpl> {
         RuntimeBuilder::default()
             .send_request(module::http::send_request)
             .build(path, data)
+            .await
     }
 }
 
-impl<D> Runtime<D> {
+impl<D> Runtime<D>
+where
+    D: Send,
+{
     #[inline]
     pub fn builder() -> RuntimeBuilder<D> {
         RuntimeBuilder::default()
     }
 
     /// Call the extension's setup function
-    pub fn setup(&mut self, config: &ExtensionConfig) -> crate::error::Result<()> {
-        let config = self.write_serialize(config)?;
+    pub async fn setup(&mut self, config: &ExtensionConfig) -> crate::error::Result<()> {
+        let config = self.write_serialize(config).await?;
 
         self.functions
             .setup
             .unwrap_or(self.functions.setup_default)
-            .call(&mut self.store, config)?;
+            .call_async(&mut self.store, config)
+            .await?;
 
         Ok(())
     }
 
-    pub fn meta(&mut self) -> Result<Meta, crate::error::Error> {
-        let memloc = unsafe { self.meta_memloc()? };
+    pub async fn meta(&mut self) -> Result<Meta, crate::error::Error> {
+        let memloc = unsafe { self.meta_memloc().await? };
         let bytes = self.read_bytes_with_len(memloc.offset, memloc.len as usize);
         let meta = serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError);
-        self.dealloc_memory(memloc.offset, memloc.len)?;
+        self.dealloc_memory(memloc.offset, memloc.len).await?;
         meta
     }
 
-    pub unsafe fn meta_memloc(&mut self) -> error::Result<MemLoc> {
-        let offset = self.functions.meta.call(&mut self.store, ())?;
-        let len = self.stack_pop()?;
+    pub async unsafe fn meta_memloc(&mut self) -> error::Result<MemLoc> {
+        let offset = self.functions.meta.call_async(&mut self.store, ()).await?;
+        let len = self.stack_pop().await?;
         let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
         Ok(MemLoc { offset, ptr, len })
     }
 
-    pub fn fetch_novel(&mut self, url: &str) -> crate::error::Result<Novel> {
-        let iptr = self.write_string(url)?;
-        let signed_len = self.functions.fetch_novel.call(&mut self.store, iptr)?;
-        self.parse_result::<Novel, QuelleError>(signed_len)
+    pub async fn fetch_novel(&mut self, url: &str) -> crate::error::Result<Novel> {
+        let iptr = self.write_string(url).await?;
+        let signed_len = self
+            .functions
+            .fetch_novel
+            .call_async(&mut self.store, iptr)
+            .await?;
+        self.parse_result::<Novel, QuelleError>(signed_len).await
     }
 
-    pub unsafe fn fetch_novel_memloc(&mut self, url: &str) -> error::Result<MemLoc> {
-        let iptr = self.write_string(url)?;
-        let len = self.functions.fetch_novel.call(&mut self.store, iptr)?;
-        let offset = self.functions.last_result.call(&mut self.store, ())?;
+    pub async unsafe fn fetch_novel_memloc(&mut self, url: &str) -> error::Result<MemLoc> {
+        let iptr = self.write_string(url).await?;
+        let len = self
+            .functions
+            .fetch_novel
+            .call_async(&mut self.store, iptr)
+            .await?;
+        let offset = self
+            .functions
+            .last_result
+            .call_async(&mut self.store, ())
+            .await?;
         let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
         Ok(MemLoc { offset, ptr, len })
     }
 
-    pub fn fetch_chapter_content(&mut self, url: &str) -> error::Result<String> {
-        let iptr = self.write_string(url)?;
+    pub async fn fetch_chapter_content(&mut self, url: &str) -> error::Result<String> {
+        let iptr = self.write_string(url).await?;
         let offset = self
             .functions
             .fetch_chapter_content
-            .call(&mut self.store, iptr)?;
+            .call_async(&mut self.store, iptr)
+            .await?;
 
-        self.parse_string_result::<QuelleError>(offset)
+        self.parse_string_result::<QuelleError>(offset).await
     }
 
-    pub unsafe fn fetch_chapter_content_memloc(&mut self, url: &str) -> error::Result<MemLoc> {
-        let iptr = self.write_string(url)?;
+    pub async unsafe fn fetch_chapter_content_memloc(
+        &mut self,
+        url: &str,
+    ) -> error::Result<MemLoc> {
+        let iptr = self.write_string(url).await?;
         let len = self
             .functions
             .fetch_chapter_content
-            .call(&mut self.store, iptr)?;
-        let offset = self.functions.last_result.call(&mut self.store, ())?;
+            .call_async(&mut self.store, iptr)
+            .await?;
+        let offset = self
+            .functions
+            .last_result
+            .call_async(&mut self.store, ())
+            .await?;
         let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
         Ok(MemLoc { offset, ptr, len })
     }
@@ -226,24 +257,39 @@ impl<D> Runtime<D> {
         self.functions.text_search.is_some()
     }
 
-    fn call_text_search(&mut self, query: &str, page: i32) -> crate::error::Result<i32> {
+    async fn call_text_search(&mut self, query: &str, page: i32) -> crate::error::Result<i32> {
         if let Some(text_search) = self.functions.text_search {
-            let query_ptr = self.write_string(query)?;
-            let signed_len = text_search.call(&mut self.store, (query_ptr, page))?;
+            let query_ptr = self.write_string(query).await?;
+            let signed_len = text_search
+                .call_async(&mut self.store, (query_ptr, page))
+                .await?;
             Ok(signed_len)
         } else {
             Err(error::Error::NotSupported(error::AffectedFunction::Search))
         }
     }
 
-    pub fn text_search(&mut self, query: &str, page: i32) -> crate::error::Result<Vec<BasicNovel>> {
-        let signed_len = self.call_text_search(query, page)?;
+    pub async fn text_search(
+        &mut self,
+        query: &str,
+        page: i32,
+    ) -> crate::error::Result<Vec<BasicNovel>> {
+        let signed_len = self.call_text_search(query, page).await?;
         self.parse_result::<Vec<BasicNovel>, QuelleError>(signed_len)
+            .await
     }
 
-    pub unsafe fn text_search_memloc(&mut self, query: &str, page: i32) -> error::Result<MemLoc> {
-        let len = self.call_text_search(query, page)?;
-        let offset = self.functions.last_result.call(&mut self.store, ())?;
+    pub async unsafe fn text_search_memloc(
+        &mut self,
+        query: &str,
+        page: i32,
+    ) -> error::Result<MemLoc> {
+        let len = self.call_text_search(query, page).await?;
+        let offset = self
+            .functions
+            .last_result
+            .call_async(&mut self.store, ())
+            .await?;
         let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
         Ok(MemLoc { offset, ptr, len })
     }
@@ -252,14 +298,14 @@ impl<D> Runtime<D> {
         self.functions.popular.is_some()
     }
 
-    pub fn popular_url(&mut self, page: i32) -> crate::error::Result<String> {
+    pub async fn popular_url(&mut self, page: i32) -> crate::error::Result<String> {
         if let Some(popular_url) = self.functions.popular_url {
-            let offset = popular_url.call(&mut self.store, page)?;
-            let bytes = self.read_bytes(offset)?;
+            let offset = popular_url.call_async(&mut self.store, page).await?;
+            let bytes = self.read_bytes(offset).await?;
             let string = String::from_utf8_lossy(bytes).to_string();
 
             let len = bytes.len() as i32;
-            self.dealloc_memory(offset, len)?;
+            self.dealloc_memory(offset, len).await?;
 
             Ok(string)
         } else {
@@ -267,10 +313,10 @@ impl<D> Runtime<D> {
         }
     }
 
-    pub unsafe fn popular_url_memloc(&mut self, page: i32) -> error::Result<MemLoc> {
+    pub async unsafe fn popular_url_memloc(&mut self, page: i32) -> error::Result<MemLoc> {
         if let Some(popular_url) = self.functions.popular_url {
-            let offset = popular_url.call(&mut self.store, page)?;
-            let len = self.stack_pop()?;
+            let offset = popular_url.call_async(&mut self.store, page).await?;
+            let len = self.stack_pop().await?;
             let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
             Ok(MemLoc { offset, ptr, len })
         } else {
@@ -278,28 +324,36 @@ impl<D> Runtime<D> {
         }
     }
 
-    fn call_popular(&mut self, page: i32) -> error::Result<i32> {
+    async fn call_popular(&mut self, page: i32) -> error::Result<i32> {
         if let Some(popular) = self.functions.popular {
-            popular.call(&mut self.store, page).map_err(|e| e.into())
+            popular
+                .call_async(&mut self.store, page)
+                .await
+                .map_err(|e| e.into())
         } else {
             Err(error::Error::NotSupported(error::AffectedFunction::Popular))
         }
     }
 
-    pub fn popular(&mut self, page: i32) -> error::Result<Vec<BasicNovel>> {
-        let signed_len = self.call_popular(page)?;
+    pub async fn popular(&mut self, page: i32) -> error::Result<Vec<BasicNovel>> {
+        let signed_len = self.call_popular(page).await?;
         self.parse_result::<Vec<BasicNovel>, QuelleError>(signed_len)
+            .await
     }
 
-    pub unsafe fn popular_memloc(&mut self, page: i32) -> error::Result<MemLoc> {
-        let len = self.call_popular(page)?;
-        let offset = self.functions.last_result.call(&mut self.store, ())?;
+    pub async unsafe fn popular_memloc(&mut self, page: i32) -> error::Result<MemLoc> {
+        let len = self.call_popular(page).await?;
+        let offset = self
+            .functions
+            .last_result
+            .call_async(&mut self.store, ())
+            .await?;
         let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
         Ok(MemLoc { offset, ptr, len })
     }
 
-    fn read_bytes(&mut self, offset: i32) -> crate::error::Result<&[u8]> {
-        let len = self.stack_pop()? as usize;
+    async fn read_bytes(&mut self, offset: i32) -> crate::error::Result<&[u8]> {
+        let len = self.stack_pop().await? as usize;
         let bytes = self.read_bytes_with_len(offset, len);
         Ok(bytes)
     }
@@ -312,20 +366,20 @@ impl<D> Runtime<D> {
         }
     }
 
-    fn parse_result<T, E>(&mut self, signed_len: i32) -> crate::error::Result<T>
+    async fn parse_result<T, E>(&mut self, signed_len: i32) -> crate::error::Result<T>
     where
         T: serde::de::DeserializeOwned,
         E: serde::de::DeserializeOwned,
         crate::error::Error: From<E>,
     {
-        match self.parse_option_result(signed_len) {
+        match self.parse_option_result(signed_len).await {
             Ok(None) => Err(error::Error::FailedResultAttempt),
             Ok(Some(v)) => Ok(v),
             Err(e) => Err(e),
         }
     }
 
-    fn parse_option_result<T, E>(&mut self, signed_len: i32) -> error::Result<Option<T>>
+    async fn parse_option_result<T, E>(&mut self, signed_len: i32) -> error::Result<Option<T>>
     where
         T: serde::de::DeserializeOwned,
         E: serde::de::DeserializeOwned,
@@ -339,14 +393,15 @@ impl<D> Runtime<D> {
                     .map(|v| Some(v))
                     .map_err(|_| Error::DeserializeError.into())
             })
+            .await
         } else if signed_len < 0 {
-            self.parse_result_error(signed_len)
+            self.parse_result_error(signed_len).await
         } else {
             Ok(None)
         }
     }
 
-    fn parse_string_result<E>(&mut self, signed_len: i32) -> error::Result<String>
+    async fn parse_string_result<E>(&mut self, signed_len: i32) -> error::Result<String>
     where
         E: DeserializeOwned,
         error::Error: From<E>,
@@ -357,14 +412,15 @@ impl<D> Runtime<D> {
             self.with_result_bytes(signed_len as usize, |bytes| {
                 String::from_utf8(bytes.to_vec()).map_err(|e| e.into())
             })
+            .await
         } else if signed_len < 0 {
-            self.parse_result_error(signed_len)
+            self.parse_result_error(signed_len).await
         } else {
             Ok(Default::default())
         }
     }
 
-    fn parse_result_error<T, E>(&mut self, signed_len: i32) -> error::Result<T>
+    async fn parse_result_error<T, E>(&mut self, signed_len: i32) -> error::Result<T>
     where
         E: DeserializeOwned,
         error::Error: From<E>,
@@ -378,35 +434,36 @@ impl<D> Runtime<D> {
                 Err(e) => Err(e),
             }
         })
+        .await
     }
 
-    fn with_result_bytes<T>(
+    async fn with_result_bytes<T>(
         &mut self,
         len: usize,
         f: impl Fn(&[u8]) -> crate::error::Result<T>,
     ) -> crate::error::Result<T> {
-        let offset = self.last_result()?;
+        let offset = self.last_result().await?;
         let bytes = self.read_bytes_with_len(offset, len);
 
         let out = f(bytes);
 
         let len = bytes.len() as i32;
-        self.dealloc_memory(offset, len)?;
+        self.dealloc_memory(offset, len).await?;
 
         out
     }
 
-    fn write_serialize<T>(&mut self, value: &T) -> crate::error::Result<i32>
+    async fn write_serialize<T>(&mut self, value: &T) -> crate::error::Result<i32>
     where
         T: Serialize,
     {
         let string = serde_json::to_string(value).map_err(|_| Error::SerializeError)?;
-        return self.write_string(&string);
+        return self.write_string(&string).await;
     }
 
-    fn write_string(&mut self, value: &str) -> crate::error::Result<i32> {
-        let ptr = self.alloc_memory(value.len() as i32)?;
-        self.stack_push(value.len() as i32)?;
+    async fn write_string(&mut self, value: &str) -> crate::error::Result<i32> {
+        let ptr = self.alloc_memory(value.len() as i32).await?;
+        self.stack_push(value.len() as i32).await?;
 
         self.memory
             .write(&mut self.store, ptr as usize, value.as_bytes())
@@ -415,38 +472,43 @@ impl<D> Runtime<D> {
         Ok(ptr)
     }
 
-    fn alloc_memory(&mut self, len: i32) -> crate::error::Result<i32> {
+    async fn alloc_memory(&mut self, len: i32) -> crate::error::Result<i32> {
         self.functions
             .alloc
-            .call(&mut self.store, len)
+            .call_async(&mut self.store, len)
+            .await
             .map_err(|e| e.into())
     }
 
-    pub fn dealloc_memory(&mut self, ptr: i32, len: i32) -> crate::error::Result<()> {
+    pub async fn dealloc_memory(&mut self, ptr: i32, len: i32) -> crate::error::Result<()> {
         self.functions
             .dealloc
-            .call(&mut self.store, (ptr, len))
+            .call_async(&mut self.store, (ptr, len))
+            .await
             .map_err(|e| e.into())
     }
 
-    fn stack_push(&mut self, size: i32) -> crate::error::Result<()> {
+    async fn stack_push(&mut self, size: i32) -> crate::error::Result<()> {
         self.functions
             .stack_push
-            .call(&mut self.store, size)
+            .call_async(&mut self.store, size)
+            .await
             .map_err(|e| e.into())
     }
 
-    fn stack_pop(&mut self) -> crate::error::Result<i32> {
+    async fn stack_pop(&mut self) -> crate::error::Result<i32> {
         self.functions
             .stack_pop
-            .call(&mut self.store, ())
+            .call_async(&mut self.store, ())
+            .await
             .map_err(|e| e.into())
     }
 
-    fn last_result(&mut self) -> error::Result<i32> {
+    async fn last_result(&mut self) -> error::Result<i32> {
         self.functions
             .last_result
-            .call(&mut self.store, ())
+            .call_async(&mut self.store, ())
+            .await
             .map_err(|e| e.into())
     }
 }

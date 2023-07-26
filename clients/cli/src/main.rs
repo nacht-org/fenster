@@ -82,7 +82,8 @@ enum Commands {
     },
 }
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     let level = match cli.verbose {
@@ -101,10 +102,10 @@ fn main() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    run(cli)
+    run(cli).await
 }
 
-fn run(cli: Cli) -> anyhow::Result<()> {
+async fn run(cli: Cli) -> anyhow::Result<()> {
     match cli.command {
         Commands::Detect { url } => {
             let lock = Lock::open(&cli.lock_file)?;
@@ -121,7 +122,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             }
         }
         Commands::Lock { dir } => {
-            let lock = Lock::generate(&dir)?;
+            let lock = Lock::generate(&dir).await?;
             lock.save(&cli.lock_file)?;
             info!("Saved lock file to '{}'", cli.lock_file.display());
         }
@@ -146,7 +147,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 cover,
             };
 
-            download::download(persist, url, PathBuf::from(&extension.path), options)?;
+            download::download(persist, url, PathBuf::from(&extension.path), options).await?;
         }
         Commands::Popular { url, page } => {
             let lock = Lock::open(&cli.lock_file)?;
@@ -155,8 +156,8 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 exit(1);
             };
 
-            let mut runner = Runtime::new(Path::new(&extension.path))?;
-            let meta = runner.meta()?;
+            let mut runner = Runtime::new(Path::new(&extension.path)).await?;
+            let meta = runner.meta().await?;
 
             if !runner.popular_supported() {
                 log::error!("'{}' does not support popular browse", meta.name);
@@ -164,7 +165,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             }
 
             log::info!("fetching popular from '{}'", meta.name);
-            let novels = runner.popular(page)?;
+            let novels = runner.popular(page).await?;
             if novels.is_empty() {
                 log::error!("No novels found");
             }
@@ -185,25 +186,20 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             info!("Found novel data at '{}'.", path.display());
 
             let lock = Lock::open(&cli.lock_file)?;
-            let meta = lock.detect(url.as_str())?.map(|ext| {
+            let meta = if let Some(ext) = lock.detect(url.as_str())? {
                 let path = Path::new(&ext.path);
                 if !path.exists() {
                     bail!("The wasm extension file could not be found");
                 }
 
-                let mut runner = Runtime::new(path)?;
-                let meta = runner.meta()?;
+                let mut runner = Runtime::new(path).await?;
+                let meta = runner.meta().await?;
                 info!("Acquired source meta information from wasm file.");
 
-                Ok(meta)
-            });
-
-            let meta = match meta {
-                Some(Ok(meta)) => Some(meta),
-                _ => {
-                    warn!("failed to retrieve meta information for the url");
-                    None
-                }
+                Some(meta)
+            } else {
+                warn!("failed to retrieve meta information for the url");
+                None
             };
 
             let novel = persist.persist_novel(path.into());
