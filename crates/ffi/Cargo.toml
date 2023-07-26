@@ -11,5 +11,6 @@ crate-type = ['cdylib']
 [dependencies]
 env_logger = "0.10.0"
 quelle_engine = { path = '../engine' }
+wasmtime = { workspace = true }
 serde_json = "1.0.93"
 thiserror = "1.0.38"

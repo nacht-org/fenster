@@ -1,11 +1,71 @@
 import 'dart:convert';
 import 'dart:ffi';
+import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:ffi/ffi.dart';
 
 import 'bindings/bindings.dart';
 import 'bindings/types.dart' as types;
 import 'models/models.dart';
+
+extension on String {
+  Pointer<Utf8> toNativeUtf8Unterminated({Allocator allocator = malloc}) {
+    final units = utf8.encode(this);
+    final Pointer<Uint8> result = allocator<Uint8>(units.length);
+    final Uint8List nativeString = result.asTypedList(units.length);
+    nativeString.setAll(0, units);
+    return result.cast();
+  }
+}
+
+/// FIXME: waiting for language support
+///
+/// this does not currently work due to lack of support for async callbacks.
+/// waiting on https://github.com/dart-lang/sdk/issues/37022.
+int sendRequest(Pointer<Uint8> pointer, int length) {
+  final bytes = pointer.asTypedList(length);
+  final map = jsonDecode(utf8.decode(bytes));
+  print(map);
+
+  Future.delayed(const Duration(milliseconds: 100))
+      .whenComplete(() => print('complete'));
+
+  // Dio()
+  //     .request(
+  //   map['url'],
+  //   data: map['data'],
+  //   queryParameters: map['params'],
+  //   options: Options(
+  //     method: map['method'],
+  //     headers: map['headers'],
+  //     responseType: ResponseType.bytes,
+  //   ),
+  // )
+  //     .then((value) {
+  //   print(value);
+  //   writeString(jsonEncode({
+  //     'status': value.statusCode,
+  //     'body': value.data,
+  //     'headers': value.headers.map,
+  //   }));
+  // }).catchError((e) {
+  //   print(e);
+  //   Map<String, dynamic> data = {};
+  //   data = {
+  //     'kind': 'Unknown',
+  //     'url': map['url'],
+  //     'map': e.toString(),
+  //   };
+  //   writeString(jsonEncode(data));
+  // });
+
+  return 0;
+}
+
+void logEvent(Pointer<Uint8> pointer, int len) {
+  print("log event");
+}
 
 class Quelle {
   final String path;
@@ -15,10 +75,14 @@ class Quelle {
   Quelle(this.path) {
     Pointer<Pointer<types.Engine>> engineOut = calloc();
     final pathC = Utf8Resource(path.toNativeUtf8());
-
     try {
       final result = bindings.open_engine_with_path(
-          pathC.pointer(), path.length, engineOut);
+        pathC.pointer(),
+        path.length,
+        Pointer.fromFunction(sendRequest, 0),
+        Pointer.fromFunction(logEvent),
+        engineOut,
+      );
       if (result != 0) throw _readError(-result);
       _engine = EngineResource(engineOut.value);
     } finally {
@@ -201,6 +265,12 @@ class MemLoc {
       throw _readResultError(-result);
     }
   }
+}
+
+void writeString(String value) {
+  final pointer = value.toNativeUtf8Unterminated();
+  bindings.set_last_offset(value.length);
+  bindings.set_last_pointer(pointer.cast());
 }
 
 class QuelleException implements Exception {

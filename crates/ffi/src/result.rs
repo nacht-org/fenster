@@ -41,10 +41,32 @@ pub extern "C" fn last_pointer() -> *mut u8 {
     return last_pointer.unwrap_or_else(|| ptr::null_mut());
 }
 
+pub fn get_last_pointer() -> Option<*mut u8> {
+    LAST_POINTER.with(|prev| prev.borrow_mut().take())
+}
+
+#[no_mangle]
+pub extern "C" fn set_last_pointer(ptr: *mut u8) {
+    LAST_POINTER.with(|inner| {
+        *inner.borrow_mut() = Some(ptr);
+    });
+}
+
 #[no_mangle]
 pub extern "C" fn last_offset() -> i32 {
     let last_offset = LAST_OFFSET.with(|prev| prev.borrow_mut().take());
     return last_offset.unwrap_or(-1);
+}
+
+pub fn get_last_offset() -> Option<i32> {
+    LAST_OFFSET.with(|prev| prev.borrow_mut().take())
+}
+
+#[no_mangle]
+pub extern "C" fn set_last_offset(offset: i32) {
+    LAST_OFFSET.with(|inner| {
+        *inner.borrow_mut() = Some(offset);
+    });
 }
 
 pub fn capture_memloc(f: impl Fn() -> Result<MemLoc, Box<dyn error::Error>>) -> i32 {

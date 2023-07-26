@@ -11,8 +11,13 @@ import '../locator.dart';
 class QuelleBindings {
   late DynamicLibrary quelle;
 
-  late int Function(Pointer<Uint8> path_ptr, int path_len,
-      Pointer<Pointer<Engine>> engine_out) open_engine_with_path;
+  late int Function(
+    Pointer<Uint8> path_ptr,
+    int path_len,
+    Pointer<NativeFunction<Int32 Function(Pointer<Uint8>, Int32)>> send_request,
+    Pointer<NativeFunction<Void Function(Pointer<Uint8>, Int32)>> log_event,
+    Pointer<Pointer<Engine>> engine_out,
+  ) open_engine_with_path;
 
   late int Function(Pointer<Engine> engine, int ptr, int len) memloc_dealloc;
 
@@ -43,7 +48,11 @@ class QuelleBindings {
 
   late Pointer<Uint8> Function() last_pointer;
 
+  late void Function(Pointer<Uint8> value) set_last_pointer;
+
   late int Function() last_offset;
+
+  late void Function(int value) set_last_offset;
 
   QuelleBindings() {
     quelle = loadDynamicLibrary();
@@ -87,8 +96,14 @@ class QuelleBindings {
     last_pointer = quelle
         .lookup<NativeFunction<last_pointer_native_t>>('last_pointer')
         .asFunction();
+    set_last_pointer = quelle
+        .lookup<NativeFunction<set_last_pointer_native_t>>('set_last_pointer')
+        .asFunction();
     last_offset = quelle
         .lookup<NativeFunction<last_offset_native_t>>('last_offset')
+        .asFunction();
+    set_last_offset = quelle
+        .lookup<NativeFunction<set_last_offset_native_t>>('set_last_offset')
         .asFunction();
   }
 }
