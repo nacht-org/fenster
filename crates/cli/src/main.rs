@@ -1,8 +1,10 @@
 mod build;
+mod cache;
 mod lock;
 
 use std::{fs::File, io::BufReader, path::PathBuf};
 
+use cache::CachingImpl;
 use clap::{Parser, Subcommand};
 use lock::Lock;
 use quelle_core::prelude::ExtensionConfig;
@@ -117,7 +119,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 level_filter: level,
             };
 
-            let mut runner = Runtime::new(&path).await?;
+            let mut runner = Runtime::builder()
+                .send_request(cache::send_request)
+                .build(&path, CachingImpl::new())
+                .await?;
+
             runner.setup(&config).await?;
 
             if meta {

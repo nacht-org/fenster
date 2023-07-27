@@ -19,3 +19,5 @@ slug = "0.1.4"
 toml = "0.7.2"
 url = "2.3.1"
 tokio = { version = "1.29.1", features = ["full"] }
+wasmtime = { workspace = true }
+reqwest = { workspace = true }

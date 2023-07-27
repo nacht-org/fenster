@@ -9,7 +9,7 @@ edition = "2021"
 wasmtime = { workspace = true }
 quelle_core = { path = "../core", features = ["reqwest"] }
 serde_json = "1.0.87"
-reqwest = { version = "0.11.12", features = ["blocking", "multipart"] }
+reqwest = { workspace = true }
 anyhow = "1.0.66"
 env_logger = "0.10.0"
 log = "0.4.17"

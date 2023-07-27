@@ -3,4 +3,5 @@
 
 /data
 /extensions/*.wasm
+/.cache
 extension-lock.json
