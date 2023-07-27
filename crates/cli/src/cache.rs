@@ -15,12 +15,11 @@ pub struct CachingImpl {
 impl CachingImpl {
     pub fn new() -> Self {
         Self {
-
             client: reqwest::Client::builder()
-            .user_agent("Mozilla/5.0 (X11; Fedora; Linux x86_64; rv:107.0) Gecko/20100101 Firefox/107.0")
-            .build()
-            .unwrap(),
-            cache: Cache { dir: PathBuf::from(".cache") }
+                .user_agent("Mozilla/5.0 (X11; Fedora; Linux x86_64; rv:107.0) Gecko/20100101 Firefox/107.0")
+                .build()
+                .unwrap(),
+            cache: Cache::default(),
         }
     }
 }
@@ -59,6 +58,14 @@ pub struct Cache {
     dir: PathBuf,
 }
 
+impl Default for Cache {
+    fn default() -> Self {
+        Self {
+            dir: PathBuf::from(".cache"),
+        }
+    }
+}
+
 impl Cache {
     pub fn put(&self, key: &str, value: &[u8]) -> Result<(), Box<dyn error::Error>> {
         let file = self.get_file_path(key);
@@ -86,5 +93,10 @@ impl Cache {
         let mut file = self.dir.join("files");
         file.push(slugify(key));
         file
+    }
+
+    pub fn clear(&self) -> Result<(), Box<dyn error::Error>> {
+        fs::remove_dir_all(&self.dir)?;
+        Ok(())
     }
 }

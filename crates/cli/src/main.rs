@@ -4,7 +4,7 @@ mod lock;
 
 use std::{fs::File, io::BufReader, path::PathBuf};
 
-use cache::CachingImpl;
+use cache::{Cache, CachingImpl};
 use clap::{Parser, Subcommand};
 use lock::Lock;
 use quelle_core::prelude::ExtensionConfig;
@@ -82,6 +82,11 @@ enum Commands {
         /// The path to the lock file
         #[arg(short, long, default_value = "extension-lock.json")]
         lock: PathBuf,
+    },
+
+    Cache {
+        #[arg(short, long)]
+        clear: bool,
     },
 }
 
@@ -190,6 +195,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Lock { dir } => {
             lock::lock(dir).await?;
+        }
+        Commands::Cache { clear } => {
+            if clear {
+                Cache::default().clear()?;
+            }
         }
     }
 
