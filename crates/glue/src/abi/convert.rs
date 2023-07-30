@@ -1,5 +1,3 @@
-use std::mem;
-
 use quelle_core::prelude::{ExtensionConfig, Meta};
 
 use super::{stack_pop, stack_push};
@@ -23,7 +21,7 @@ impl ToWasmAbi for String {
         stack_push(bytes.len() as i32);
 
         let ptr = bytes.as_mut_ptr();
-        mem::forget(bytes);
+        std::mem::forget(bytes);
 
         ptr
     }
@@ -58,11 +56,11 @@ macro_rules! impl_wasm_abi_for_serde {
 #[macro_export]
 macro_rules! impl_from_abi_for_serde {
     ($name:ty) => {
-        impl crate::abi::FromWasmAbi for $name {
+        impl $crate::abi::FromWasmAbi for $name {
             type Type = *mut u8;
 
             fn from_wasm_abi(value: Self::Type) -> Self {
-                let len = crate::abi::stack_pop() as usize;
+                let len = $crate::abi::stack_pop() as usize;
                 let bytes = unsafe { Vec::from_raw_parts(value, len, len) };
                 serde_json::from_slice(&bytes).unwrap()
             }
@@ -73,15 +71,15 @@ macro_rules! impl_from_abi_for_serde {
 #[macro_export]
 macro_rules! impl_to_abi_for_serde {
     ($name:ty) => {
-        impl crate::abi::ToWasmAbi for $name {
+        impl $crate::abi::ToWasmAbi for $name {
             type Type = *mut u8;
 
             fn to_wasm_abi(self) -> Self::Type {
                 let mut string = serde_json::to_string(&self).unwrap();
-                crate::abi::stack_push(string.len() as i32);
+                $crate::abi::stack_push(string.len() as i32);
 
                 let ptr = string.as_mut_ptr();
-                mem::forget(string);
+                std::mem::forget(string);
                 ptr
             }
         }

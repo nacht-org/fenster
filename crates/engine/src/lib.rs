@@ -95,9 +95,12 @@ impl<D: Send + 'static> RuntimeBuilder<D> {
             meta: get_func!("meta"),
             fetch_novel: get_func!("fetch_novel"),
             fetch_chapter_content: get_func!("fetch_chapter_content"),
-            text_search: get_func_optional!("text_search"),
             popular_url: get_func_optional!("popular_url"),
             popular: get_func_optional!("popular"),
+            text_search: get_func_optional!("text_search"),
+            filter_options: get_func_optional!("filter_options"),
+            filter_search_url: get_func_optional!("filter_search_url"),
+            filter_search: get_func_optional!("filter_search"),
         };
 
         Ok(Runtime {
@@ -133,15 +136,22 @@ struct Functions {
     // Result
     last_result: TypedFunc<(), i32>,
 
-    // User
+    // Extension
     setup: Option<TypedFunc<i32, ()>>,
     setup_default: TypedFunc<i32, ()>,
+
     meta: TypedFunc<(), i32>,
+
     fetch_novel: TypedFunc<i32, i32>,
     fetch_chapter_content: TypedFunc<i32, i32>,
-    text_search: Option<TypedFunc<(i32, i32), i32>>,
+
     popular_url: Option<TypedFunc<i32, i32>>,
     popular: Option<TypedFunc<i32, i32>>,
+
+    text_search: Option<TypedFunc<(i32, i32), i32>>,
+    filter_options: Option<TypedFunc<(), i32>>,
+    filter_search_url: Option<TypedFunc<(i32, i32), i32>>,
+    filter_search: Option<TypedFunc<(i32, i32), i32>>,
 }
 
 impl Runtime<DefaultImpl> {
@@ -253,47 +263,6 @@ where
         Ok(MemLoc { offset, ptr, len })
     }
 
-    pub fn text_search_supported(&self) -> bool {
-        self.functions.text_search.is_some()
-    }
-
-    async fn call_text_search(&mut self, query: &str, page: i32) -> crate::error::Result<i32> {
-        if let Some(text_search) = self.functions.text_search {
-            let query_ptr = self.write_string(query).await?;
-            let signed_len = text_search
-                .call_async(&mut self.store, (query_ptr, page))
-                .await?;
-            Ok(signed_len)
-        } else {
-            Err(error::Error::NotSupported(error::AffectedFunction::Search))
-        }
-    }
-
-    pub async fn text_search(
-        &mut self,
-        query: &str,
-        page: i32,
-    ) -> crate::error::Result<Vec<BasicNovel>> {
-        let signed_len = self.call_text_search(query, page).await?;
-        self.parse_result::<Vec<BasicNovel>, QuelleError>(signed_len)
-            .await
-    }
-
-    pub async unsafe fn text_search_memloc(
-        &mut self,
-        query: &str,
-        page: i32,
-    ) -> error::Result<MemLoc> {
-        let len = self.call_text_search(query, page).await?;
-        let offset = self
-            .functions
-            .last_result
-            .call_async(&mut self.store, ())
-            .await?;
-        let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
-        Ok(MemLoc { offset, ptr, len })
-    }
-
     pub fn popular_supported(&self) -> bool {
         self.functions.popular.is_some()
     }
@@ -350,6 +319,69 @@ where
             .await?;
         let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
         Ok(MemLoc { offset, ptr, len })
+    }
+
+    // ------------------------------------------------------------------------------------
+    // Text search
+
+    pub fn text_search_supported(&self) -> bool {
+        self.functions.text_search.is_some()
+    }
+
+    async fn call_text_search(&mut self, query: &str, page: i32) -> crate::error::Result<i32> {
+        if let Some(text_search) = self.functions.text_search {
+            let query_ptr = self.write_string(query).await?;
+            let signed_len = text_search
+                .call_async(&mut self.store, (query_ptr, page))
+                .await?;
+            Ok(signed_len)
+        } else {
+            Err(error::Error::NotSupported(error::AffectedFunction::Search))
+        }
+    }
+
+    pub async fn text_search(
+        &mut self,
+        query: &str,
+        page: i32,
+    ) -> crate::error::Result<Vec<BasicNovel>> {
+        let signed_len = self.call_text_search(query, page).await?;
+        self.parse_result::<Vec<BasicNovel>, QuelleError>(signed_len)
+            .await
+    }
+
+    pub async unsafe fn text_search_memloc(
+        &mut self,
+        query: &str,
+        page: i32,
+    ) -> error::Result<MemLoc> {
+        let len = self.call_text_search(query, page).await?;
+        let offset = self
+            .functions
+            .last_result
+            .call_async(&mut self.store, ())
+            .await?;
+        let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
+        Ok(MemLoc { offset, ptr, len })
+    }
+
+    // ------------------------------------------------------------------------------------
+    // Filter search
+
+    pub fn filter_search_supported(&self) -> bool {
+        self.functions.filter_options.is_some()
+    }
+
+    pub async fn filter_options(&mut self) -> error::Result<FieldMap> {
+        let Some(filter_options) = self.functions.filter_options
+            else { return Err(error::Error::NotSupported(error::AffectedFunction::Search)) };
+
+        let offset = filter_options.call_async(&mut self.store, ()).await?;
+        let len = self.stack_pop().await?;
+        let bytes = self.read_bytes_with_len(offset, len as usize);
+        let options = serde_json::from_slice(bytes).map_err(|_| Error::DeserializeError);
+        self.dealloc_memory(offset, len).await?;
+        options
     }
 
     async fn read_bytes(&mut self, offset: i32) -> crate::error::Result<&[u8]> {

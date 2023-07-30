@@ -9,6 +9,9 @@ pub enum QuelleError {
     #[error("{0}")]
     RequestFailed(#[from] BoxedRequestError),
 
+    #[error("filter verification failed: {0}")]
+    FilterVerificationFailed(String),
+
     #[error("{0}")]
     ParseFailed(#[from] ParseError),
 

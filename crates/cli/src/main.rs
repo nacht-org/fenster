@@ -42,17 +42,20 @@ enum Commands {
         #[arg(short, long)]
         content: Option<Url>,
 
+        /// Fetch and print popular novels
+        #[arg(short, long)]
+        popular: bool,
+
         /// A text query to use to search
         #[arg(short, long)]
         search: Option<String>,
 
+        #[arg(short, long)]
+        options: bool,
+
         /// Page used in search and popular
         #[arg(short, long, default_value = "1")]
         page: i32,
-
-        /// Fetch and print popular novels
-        #[arg(short, long)]
-        popular: bool,
     },
 
     /// Build the extensions
@@ -116,9 +119,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             meta,
             novel,
             content,
-            search: query,
-            page,
             popular,
+            search,
+            options,
+            page,
         } => {
             let config = ExtensionConfig {
                 level_filter: level,
@@ -146,7 +150,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("{content:#?}");
             }
 
-            if let Some(query) = query {
+            if let Some(query) = search {
                 if runner.text_search_supported() {
                     let result = runner.text_search(&query, page).await?;
                     for item in result {
@@ -168,6 +172,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 } else {
                     println!("popular not supported");
+                }
+            }
+
+            if options {
+                if runner.filter_search_supported() {
+                    let result = runner.filter_options().await?;
+                    println!("{result:#?}");
+                } else {
+                    println!("Filter search not supported");
                 }
             }
         }
