@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 mod fields;
 
@@ -12,7 +12,7 @@ pub trait InputField {
     fn verify_input(&self, value: &Self::Type) -> VerifyResult;
 }
 
-pub type FieldMap = HashMap<String, Field>;
+pub type FieldMap = BTreeMap<String, Field>;
 
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type", rename_all = "snake_case")]
