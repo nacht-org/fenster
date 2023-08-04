@@ -233,7 +233,7 @@ where
         Ok(MemLoc { offset, ptr, len })
     }
 
-    pub async fn fetch_chapter_content(&mut self, url: &str) -> error::Result<String> {
+    pub async fn fetch_chapter_content(&mut self, url: &str) -> error::Result<Content> {
         let iptr = self.write_string(url).await?;
         let offset = self
             .functions
@@ -241,7 +241,7 @@ where
             .call_async(&mut self.store, iptr)
             .await?;
 
-        self.parse_string_result::<QuelleError>(offset).await
+        self.parse_result::<Content, QuelleError>(offset).await
     }
 
     pub async unsafe fn fetch_chapter_content_memloc(

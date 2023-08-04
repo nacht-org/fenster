@@ -127,7 +127,7 @@ impl<'a> DownloadHandler<'a> {
             }
 
             let content = runner.fetch_chapter_content(&chapter.url).await?;
-            let path = persist_novel.save_chapter(chapter, content)?;
+            let path = persist_novel.save_chapter(chapter, content.data)?;
 
             info!("Downloaded '{}' to '{}'.", &chapter.title, path.display());
 

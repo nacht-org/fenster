@@ -140,7 +140,7 @@ fn volumes(id: &str) -> Result<Vec<Volume>, QuelleError> {
 }
 
 #[expose]
-pub fn fetch_chapter_content(url: String) -> Result<String, QuelleError> {
+pub fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
     let response = Request::get(url).send()?;
     let doc = kuchiki::parse_html().one(response.text().unwrap());
 
@@ -151,5 +151,5 @@ pub fn fetch_chapter_content(url: String) -> Result<String, QuelleError> {
         .transpose()?
         .ok_or(QuelleError::ParseFailed(ParseError::ElementNotFound))?;
 
-    Ok(content)
+    Ok(content.into())
 }
