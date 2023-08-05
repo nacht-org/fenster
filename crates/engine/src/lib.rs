@@ -4,7 +4,6 @@ pub mod module;
 
 use data::DefaultImpl;
 use error::Error;
-use log::info;
 use quelle_core::prelude::*;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{future::Future, path::Path, slice};
@@ -321,8 +320,9 @@ where
         Ok(MemLoc { offset, ptr, len })
     }
 
-    // ------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------
     // Text search
+    // --------------------------------------------------------------------------------
 
     pub fn text_search_supported(&self) -> bool {
         self.functions.text_search.is_some()
@@ -365,8 +365,9 @@ where
         Ok(MemLoc { offset, ptr, len })
     }
 
-    // ------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------
     // Filter search
+    // --------------------------------------------------------------------------------
 
     pub fn filter_search_supported(&self) -> bool {
         self.functions.filter_options.is_some()
@@ -383,6 +384,38 @@ where
         self.dealloc_memory(offset, len).await?;
         options
     }
+
+    pub async fn filter_search_url(&mut self, params: &str, page: i32) -> error::Result<String> {
+        let Some(filter_search_url) = self.functions.filter_search_url
+            else { return Err(error::Error::NotSupported(error::AffectedFunction::Search)) };
+
+        let params_ptr = self.write_string(params).await?;
+        let len = filter_search_url
+            .call_async(&mut self.store, (params_ptr, page))
+            .await?;
+
+        self.parse_string_result::<QuelleError>(len).await
+    }
+
+    pub async fn filter_search(
+        &mut self,
+        params: &str,
+        page: i32,
+    ) -> error::Result<Vec<BasicNovel>> {
+        let Some(filter_search) = self.functions.filter_search
+            else { return Err(error::Error::NotSupported(error::AffectedFunction::Search)) };
+
+        let params_ptr = self.write_string(params).await?;
+        let len = filter_search
+            .call_async(&mut self.store, (params_ptr, page))
+            .await?;
+
+        self.parse_result::<Vec<BasicNovel>, QuelleError>(len).await
+    }
+
+    // --------------------------------------------------------------------------------
+    // Helpers
+    // --------------------------------------------------------------------------------
 
     async fn read_bytes(&mut self, offset: i32) -> crate::error::Result<&[u8]> {
         let len = self.stack_pop().await? as usize;
@@ -401,10 +434,9 @@ where
     async fn parse_result<T, E>(&mut self, signed_len: i32) -> crate::error::Result<T>
     where
         T: serde::de::DeserializeOwned,
-        E: serde::de::DeserializeOwned,
-        crate::error::Error: From<E>,
+        E: serde::de::DeserializeOwned + Into<error::Error>,
     {
-        match self.parse_option_result(signed_len).await {
+        match self.parse_option_result::<T, E>(signed_len).await {
             Ok(None) => Err(error::Error::FailedResultAttempt),
             Ok(Some(v)) => Ok(v),
             Err(e) => Err(e),
@@ -414,10 +446,9 @@ where
     async fn parse_option_result<T, E>(&mut self, signed_len: i32) -> error::Result<Option<T>>
     where
         T: serde::de::DeserializeOwned,
-        E: serde::de::DeserializeOwned,
-        crate::error::Error: From<E>,
+        E: serde::de::DeserializeOwned + Into<error::Error>,
     {
-        info!("parsing Result<T, E> from a result with length: {signed_len}");
+        log::debug!("parsing Result<T, E> from a result with length: {signed_len}");
 
         if signed_len > 0 {
             self.with_result_bytes(signed_len as usize, |bytes| {
@@ -427,7 +458,7 @@ where
             })
             .await
         } else if signed_len < 0 {
-            self.parse_result_error(signed_len).await
+            self.parse_result_error::<Option<T>, E>(signed_len).await
         } else {
             Ok(None)
         }
@@ -435,10 +466,9 @@ where
 
     async fn parse_string_result<E>(&mut self, signed_len: i32) -> error::Result<String>
     where
-        E: DeserializeOwned,
-        error::Error: From<E>,
+        E: DeserializeOwned + Into<error::Error>,
     {
-        info!("parsing Result<String, E> from a result with length: {signed_len}");
+        log::debug!("parsing Result<String, E> from a result with length: {signed_len}");
 
         if signed_len > 0 {
             self.with_result_bytes(signed_len as usize, |bytes| {
@@ -446,7 +476,7 @@ where
             })
             .await
         } else if signed_len < 0 {
-            self.parse_result_error(signed_len).await
+            self.parse_result_error::<String, E>(signed_len).await
         } else {
             Ok(Default::default())
         }
@@ -454,8 +484,7 @@ where
 
     async fn parse_result_error<T, E>(&mut self, signed_len: i32) -> error::Result<T>
     where
-        E: DeserializeOwned,
-        error::Error: From<E>,
+        E: DeserializeOwned + Into<error::Error>,
     {
         self.with_result_bytes((-signed_len) as usize, |bytes| {
             let err: Result<E, error::Error> =
