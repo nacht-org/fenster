@@ -9,6 +9,6 @@ edition = "2021"
 serde_json = "1.0.87"
 quelle_core = { path = "../core" }
 quelle_glue_derive = { path = "../glue_derive" }
-serde = "1.0.147"
+serde = { version = "1.0.147", features = ["derive"] }
 kuchiki = "0.8.1"
 log = { workspace = true, features = ["std"] }

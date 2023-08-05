@@ -1,6 +1,8 @@
+mod fields;
 mod params;
+mod utils;
 
-use proc_macro2::{TokenStream, TokenTree};
+use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
     parenthesized,
@@ -20,24 +22,9 @@ struct Expose {
     rtype: ReturnType,
 }
 
-fn skip_until_pub(input: ParseStream) -> syn::Result<()> {
-    input.step(|cursor| {
-        let mut rest = *cursor;
-        while let Some((tt, next)) = rest.token_tree() {
-            match &tt {
-                TokenTree::Ident(ident) if ident.to_string() == "pub" => {
-                    return Ok(((), rest));
-                }
-                _ => rest = next,
-            }
-        }
-        Err(cursor.error("no `pub` was found after this point"))
-    })
-}
-
 impl Parse for Expose {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        skip_until_pub(input)?;
+        utils::skip_until_ident(input, "pub")?;
 
         input.parse::<Token![pub]>()?;
         input.parse::<Token![fn]>()?;
@@ -143,4 +130,9 @@ pub fn expose(
 
     // println!("{expanded}");
     expanded.into()
+}
+
+#[proc_macro_derive(InputField)]
+pub fn derive_input(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    fields::derive_input(item)
 }

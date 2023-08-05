@@ -1,4 +1,4 @@
-use quelle_core::prelude::{BasicNovel, Novel, QuelleError};
+use quelle_core::prelude::{BasicNovel, Content, Novel, QuelleError};
 use serde::Serialize;
 use std::{cell::RefCell, mem, ptr};
 
@@ -82,6 +82,18 @@ impl ToWasmAbi for Result<String, QuelleError> {
 }
 
 impl ToWasmAbi for Result<Novel, QuelleError> {
+    type Type = i32;
+
+    #[inline]
+    fn to_wasm_abi(self) -> Self::Type {
+        match self {
+            Ok(v) => store_serde(v, false),
+            Err(e) => store_error(e),
+        }
+    }
+}
+
+impl ToWasmAbi for Result<Content, QuelleError> {
     type Type = i32;
 
     #[inline]

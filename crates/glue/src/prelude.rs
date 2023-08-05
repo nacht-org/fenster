@@ -7,4 +7,4 @@ pub use crate::out::set_panic_hook;
 pub use crate::setup::init_extension;
 
 // Re-export proc expose
-pub use quelle_glue_derive::expose;
+pub use quelle_glue_derive::{expose, InputField};

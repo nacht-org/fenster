@@ -167,7 +167,7 @@ fn collect_metadata(doc: &NodeRef) -> Result<Vec<Metadata>, QuelleError> {
 }
 
 #[expose]
-pub fn fetch_chapter_content(url: String) -> Result<String, QuelleError> {
+pub fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
     let response = Request::get(url.clone()).send()?;
     let doc = kuchiki::parse_html().one(response.text().unwrap());
 
@@ -202,9 +202,10 @@ pub fn fetch_chapter_content(url: String) -> Result<String, QuelleError> {
         }
     }
 
-    content
+    let content = content
         .as_node()
         .outer_html()
-        .map(|c| c.replace("\n", ""))
-        .map_err(|e| e.into())
+        .map(|c| c.replace("\n", ""))?;
+
+    Ok(content.into())
 }

@@ -1,10 +1,11 @@
+mod chapter;
 mod meta;
 mod novel;
 use std::collections::HashMap;
 
-use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
+pub use chapter::{Chapter, Content, TaggedDateTime};
 pub use meta::Meta;
 pub use novel::{BasicNovel, Novel};
 
@@ -103,26 +104,13 @@ impl Default for Volume {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Chapter {
-    pub index: i32,
-    pub title: String,
-    pub url: String,
-    pub updated_at: Option<TaggedDateTime>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub enum TaggedDateTime {
-    Utc(NaiveDateTime),
-    Local(NaiveDateTime),
-}
-
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub enum NovelStatus {
     Ongoing,
     Hiatus,
     Completed,
     Stub,
+    Dropped,
     #[default]
     Unknown,
 }
@@ -134,6 +122,7 @@ impl From<&str> for NovelStatus {
             "hiatus" => NovelStatus::Hiatus,
             "completed" => NovelStatus::Completed,
             "stub" => NovelStatus::Stub,
+            "dropped" => NovelStatus::Dropped,
             _ => NovelStatus::Unknown,
         }
     }

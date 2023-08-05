@@ -1,3 +1,5 @@
+mod search;
+
 #[allow(unused_imports)]
 #[macro_use]
 extern crate quelle_glue;
@@ -66,7 +68,7 @@ pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
 }
 
 #[expose]
-pub fn fetch_chapter_content(url: String) -> Result<String, QuelleError> {
+pub fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
     let response = Request::get(url).send()?;
     let doc = kuchiki::parse_html().one(response.text().unwrap());
 
@@ -77,7 +79,7 @@ pub fn fetch_chapter_content(url: String) -> Result<String, QuelleError> {
         .transpose()?
         .ok_or(QuelleError::ParseFailed(ParseError::ElementNotFound))?;
 
-    Ok(content)
+    Ok(content.into())
 }
 
 fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Result<Vec<Chapter>, QuelleError> {
@@ -125,16 +127,16 @@ fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Result<Vec<Chapte
 
 #[expose]
 pub fn popular_url(page: i32) -> String {
-    popular_url_private(page)
+    popular_url_pri(page)
 }
 
-pub fn popular_url_private(page: i32) -> String {
+pub fn popular_url_pri(page: i32) -> String {
     format!("https://www.royalroad.com/fictions/weekly-popular?page={page}")
 }
 
 #[expose]
 pub fn popular(page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
-    let url = popular_url_private(page);
+    let url = popular_url_pri(page);
     let response = Request::get(url.clone()).send()?;
     let doc = kuchiki::parse_html().one(response.text().unwrap());
 
@@ -148,38 +150,6 @@ pub fn popular(page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
                 title: item.as_node().select_first(".fiction-title").get_text()?,
                 cover: item.as_node().select_first("img").get_attribute("src"),
                 url: META.convert_into_absolute_url(novel_url, Some(&url))?,
-            };
-
-            novels.push(novel);
-        }
-    }
-
-    Ok(novels)
-}
-
-#[expose]
-pub fn text_search(query: String, page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
-    let url = format!("https://www.royalroad.com/fictions/search?title={query}&page={page}");
-    let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text().unwrap());
-
-    let mut novels = vec![];
-    if let Ok(elements) = doc.select(".fiction-list-item") {
-        for div in elements {
-            let Some(a) = div.as_node().select_first(".fiction-title a").ok() else { continue };
-            let Some(link) = a.get_attribute("href") else { continue };
-
-            let cover = div
-                .as_node()
-                .select_first("img")
-                .get_attribute("src")
-                .map(|src| META.convert_into_absolute_url(src, Some(&url)))
-                .transpose()?;
-
-            let novel = BasicNovel {
-                title: a.get_text(),
-                url: META.convert_into_absolute_url(link, Some(&url))?,
-                cover,
             };
 
             novels.push(novel);

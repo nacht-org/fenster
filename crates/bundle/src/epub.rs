@@ -26,13 +26,13 @@ pub fn bundle_epub<B: Bundle>(
         set_cover_image(&mut builder, path, content_type)?;
     }
 
-    builder.metadata("title", &novel.title)?;
+    builder.set_title(&novel.title);
     for author in &novel.authors {
-        builder.metadata("author", author)?;
+        builder.add_author(author);
     }
 
     for paragraph in &novel.description {
-        builder.metadata("description", paragraph)?;
+        builder.add_description(paragraph);
     }
 
     info!("Written title, authors, and description");
@@ -43,11 +43,8 @@ pub fn bundle_epub<B: Bundle>(
         }
     }
 
-    builder.metadata("generator", "quelle")?;
-
-    for lang in &novel.langs {
-        builder.metadata("lang", lang)?;
-    }
+    builder.set_generator("quelle");
+    builder.set_lang(novel.langs.iter().join(","));
 
     info!("Written metadata");
 
@@ -76,7 +73,6 @@ pub fn bundle_epub<B: Bundle>(
     builder.generate(out)?;
 
     info!("Epub writing complete.");
-
     Ok(())
 }
 

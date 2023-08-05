@@ -186,7 +186,7 @@ fn toc_url(current: &str, page: usize) -> String {
 }
 
 #[expose]
-pub fn fetch_chapter_content(url: String) -> Result<String, QuelleError> {
+pub fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
     let response = Request::get(url).send()?;
     let doc = kuchiki::parse_html().one(response.text().unwrap());
 
@@ -199,7 +199,10 @@ pub fn fetch_chapter_content(url: String) -> Result<String, QuelleError> {
     doc.select("strong i i").detach_all();
     doc.select("p > sub").detach_all();
 
-    content.as_node().outer_html().map_err(Into::into)
+    Ok(Content {
+        data: content.as_node().outer_html()?,
+        ..Default::default()
+    })
 }
 
 #[expose]
