@@ -40,6 +40,12 @@ pub enum ParseError {
     Other(String),
 }
 
+impl ParseError {
+    pub fn other<S: Into<String>>(s: S) -> Self {
+        Self::Other(s.into())
+    }
+}
+
 impl From<ParseIntError> for QuelleError {
     fn from(_: ParseIntError) -> Self {
         QuelleError::ParseFailed(ParseError::ParseIntError)

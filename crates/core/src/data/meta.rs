@@ -42,8 +42,12 @@ impl Meta {
     }
 
     #[inline]
-    pub fn abu_w(&self, url: String, current: &str) -> Result<String, ParseError> {
+    pub fn abs_url(&self, url: String, current: &str) -> Result<String, ParseError> {
         self.convert_into_absolute_url(url, Some(current))
+    }
+
+    pub fn home_url(&self) -> &str {
+        &self.base_urls[0]
     }
 }
 

@@ -1,3 +1,5 @@
+mod search;
+
 #[allow(unused_imports)]
 #[macro_use]
 extern crate quelle_glue;
