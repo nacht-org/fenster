@@ -8,8 +8,8 @@ use slug::slugify;
 use wasmtime::Caller;
 
 pub struct CachingImpl {
-    client: reqwest::Client,
-    cache: Cache,
+    pub client: reqwest::Client,
+    pub cache: Cache,
 }
 
 impl CachingImpl {

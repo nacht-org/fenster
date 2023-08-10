@@ -10,7 +10,7 @@ macro_rules! define_meta {
             attrs: [$($attr:ident),*],
         };
     ) => {
-        static $var: Lazy<Meta> = Lazy::new(|| Meta {
+        static $var: once_cell::sync::Lazy<Meta> = once_cell::sync::Lazy::new(|| Meta {
             id: String::from($id),
             name: String::from($name),
             langs: vec![$(String::from($lang)),+],

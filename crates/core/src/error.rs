@@ -1,4 +1,4 @@
-use std::num::ParseIntError;
+use std::{num::ParseIntError, str::Utf8Error};
 
 use serde::{Deserialize, Serialize};
 
@@ -11,6 +11,9 @@ pub enum QuelleError {
 
     #[error("filter verification failed: {0}")]
     FilterVerificationFailed(String),
+
+    #[error("failed to decode utf-8 bytes")]
+    Utf8Error,
 
     #[error("{0}")]
     ParseFailed(#[from] ParseError),
@@ -40,5 +43,11 @@ pub enum ParseError {
 impl From<ParseIntError> for QuelleError {
     fn from(_: ParseIntError) -> Self {
         QuelleError::ParseFailed(ParseError::ParseIntError)
+    }
+}
+
+impl From<Utf8Error> for QuelleError {
+    fn from(_: Utf8Error) -> Self {
+        QuelleError::Utf8Error
     }
 }

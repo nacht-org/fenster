@@ -7,7 +7,7 @@ use std::{fs::File, io::BufReader, path::PathBuf};
 use cache::{Cache, CachingImpl};
 use clap::{Parser, Subcommand};
 use lock::Lock;
-use quelle_core::prelude::ExtensionConfig;
+use quelle_core::prelude::{ExtensionConfig, Request};
 use quelle_engine::Runtime;
 use simplelog::{Config, LevelFilter, TermLogger};
 use url::Url;
@@ -88,6 +88,10 @@ enum Commands {
     },
 
     Cache {
+        /// Download and cache
+        #[arg(short, long)]
+        url: Option<String>,
+
         #[arg(short, long)]
         clear: bool,
     },
@@ -209,7 +213,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Lock { dir } => {
             lock::lock(dir).await?;
         }
-        Commands::Cache { clear } => {
+        Commands::Cache { url, clear } => {
+            if let Some(url) = url {
+                let data = CachingImpl::new();
+
+                let key = url.clone();
+                let client = &data.client;
+
+                let request = Request::new(quelle_core::prelude::Method::Get, url);
+
+                use quelle_engine::module::http::{parse_response, send_request_reqwest};
+                let response = send_request_reqwest::<CachingImpl>(client, request).await;
+                let response = parse_response(response).await;
+
+                let json = serde_json::to_string(&response).unwrap();
+                data.cache.put(&key, &json.as_bytes())?;
+                println!("{json}");
+                println!("{:?}", response.unwrap().text()?);
+            }
+
             if clear {
                 Cache::default().clear()?;
             }

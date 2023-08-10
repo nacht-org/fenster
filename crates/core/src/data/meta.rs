@@ -40,6 +40,11 @@ impl Meta {
 
         Ok(url)
     }
+
+    #[inline]
+    pub fn abu_w(&self, url: String, current: &str) -> Result<String, ParseError> {
+        self.convert_into_absolute_url(url, Some(current))
+    }
 }
 
 fn base_url(url: Url) -> String {

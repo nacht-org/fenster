@@ -1,6 +1,6 @@
 [package]
-name = "extension_royalroad"
-version = "0.1.1"
+name = "extension_novelfull"
+version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -15,5 +15,3 @@ serde_json = "1.0.87"
 once_cell = { workspace = true }
 chrono = { workspace = true }
 log = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
-url = "2.4.0"

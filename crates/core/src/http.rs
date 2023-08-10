@@ -74,11 +74,11 @@ pub struct Response {
 }
 
 impl Response {
-    pub fn text(&self) -> Option<&str> {
+    pub fn text(&self) -> Result<Option<&str>, std::str::Utf8Error> {
         self.body
             .as_ref()
-            .map(|body| std::str::from_utf8(body).ok())
-            .flatten()
+            .map(|body| std::str::from_utf8(body))
+            .transpose()
     }
 }
 

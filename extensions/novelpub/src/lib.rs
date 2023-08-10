@@ -6,7 +6,6 @@ use std::collections::HashMap;
 
 use chrono::NaiveDateTime;
 use kuchiki::{traits::TendrilSink, NodeRef};
-use once_cell::sync::Lazy;
 use quelle_core::prelude::*;
 use quelle_glue::prelude::*;
 
@@ -24,7 +23,7 @@ define_meta! {
 #[expose]
 pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
     let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text().unwrap());
+    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
     let mut status = NovelStatus::default();
     if let Some(nodes) = doc.select(".header-stats span").ok() {
@@ -96,7 +95,7 @@ fn collect_toc(url: &str) -> Result<Vec<Volume>, QuelleError> {
     // parse the first page
     let curl = toc_url(url, 1);
     let response = Request::get(curl).send()?;
-    let doc = kuchiki::parse_html().one(response.text().unwrap());
+    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
     extract_toc(&doc, &mut volume)?;
 
     // get page count
@@ -125,7 +124,7 @@ fn collect_toc(url: &str) -> Result<Vec<Volume>, QuelleError> {
         for page in 2..=end {
             let curl = toc_url(url, page);
             let response = Request::get(curl).send()?;
-            let doc = kuchiki::parse_html().one(response.text().unwrap());
+            let doc = kuchiki::parse_html().one(response.text()?.unwrap());
             extract_toc(&doc, &mut volume)?;
         }
     }
@@ -188,7 +187,7 @@ fn toc_url(current: &str, page: usize) -> String {
 #[expose]
 pub fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
     let response = Request::get(url).send()?;
-    let doc = kuchiki::parse_html().one(response.text().unwrap());
+    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
     let content = doc
         .select_first("#chapter-container")
@@ -218,7 +217,7 @@ pub fn popular_url_private(page: i32) -> String {
 pub fn popular(page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
     let url = popular_url_private(page);
     let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text().unwrap());
+    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
     let mut novels = vec![];
     if let Ok(elements) = doc.select(".novel-list > .novel-item") {

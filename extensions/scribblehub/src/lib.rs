@@ -6,7 +6,6 @@ use std::collections::HashMap;
 
 use chrono::NaiveDateTime;
 use kuchiki::{traits::TendrilSink, NodeRef};
-use once_cell::sync::Lazy;
 use quelle_core::prelude::*;
 use quelle_glue::prelude::*;
 
@@ -24,8 +23,7 @@ define_meta! {
 #[expose]
 pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
     let response = Request::get(url.clone()).send()?;
-
-    let doc = kuchiki::parse_html().one(response.text().unwrap());
+    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
     let id = url
         .split("/")
@@ -106,7 +104,7 @@ fn volumes(id: &str) -> Result<Vec<Volume>, QuelleError> {
     .form(data)
     .send()?;
 
-    let doc = kuchiki::parse_html().one(response.text().unwrap());
+    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
     let mut volume = Volume::default();
 
     if let Ok(nodes) = doc.select("li.toc_w") {
@@ -142,7 +140,7 @@ fn volumes(id: &str) -> Result<Vec<Volume>, QuelleError> {
 #[expose]
 pub fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
     let response = Request::get(url).send()?;
-    let doc = kuchiki::parse_html().one(response.text().unwrap());
+    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
     let content = doc
         .select_first("#chp_raw")

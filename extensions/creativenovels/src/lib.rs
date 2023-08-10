@@ -6,7 +6,6 @@ use std::collections::HashMap;
 
 use chrono::{NaiveDate, NaiveTime};
 use kuchiki::{traits::TendrilSink, NodeRef};
-use once_cell::sync::Lazy;
 use quelle_core::prelude::*;
 use quelle_glue::prelude::*;
 use regex::Regex;
@@ -25,7 +24,7 @@ define_meta! {
 #[expose]
 pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
     let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text().unwrap());
+    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
     let author = doc
         .select_first(".x-bar-container > [class*='14']")
@@ -78,7 +77,7 @@ fn collect_volumes(doc: &NodeRef) -> Result<Vec<Volume>, QuelleError> {
     .form(form)
     .send()?;
 
-    let content = response.text().unwrap();
+    let content = response.text()?.unwrap();
     if content.starts_with("success") {
         let content = &content["success.define.".len()..];
         for data in content.split(".end_data.") {
@@ -169,7 +168,7 @@ fn collect_metadata(doc: &NodeRef) -> Result<Vec<Metadata>, QuelleError> {
 #[expose]
 pub fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
     let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text().unwrap());
+    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
     let content = doc
         .select_first("article .entry-content")

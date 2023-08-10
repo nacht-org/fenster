@@ -9,7 +9,6 @@ use kuchiki::{
     iter::{Descendants, Elements, Select},
     traits::TendrilSink,
 };
-use once_cell::sync::Lazy;
 use quelle_core::prelude::*;
 use quelle_glue::prelude::*;
 
@@ -27,7 +26,7 @@ define_meta! {
 #[expose]
 pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
     let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text().unwrap());
+    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
     let volume = Volume {
         chapters: doc
@@ -70,7 +69,7 @@ pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
 #[expose]
 pub fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
     let response = Request::get(url).send()?;
-    let doc = kuchiki::parse_html().one(response.text().unwrap());
+    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
     let content = doc
         .select_first(".chapter-content")
@@ -138,7 +137,7 @@ pub fn popular_url_pri(page: i32) -> String {
 pub fn popular(page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
     let url = popular_url_pri(page);
     let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text().unwrap());
+    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
     let mut novels = vec![];
     if let Ok(elements) = doc.select(".fiction-list-item") {

@@ -150,7 +150,7 @@ fn filter_search_url_pri(filter: FilterResult, page: i32) -> Result<String, Quel
 pub fn filter_search(filter: FilterResult, page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
     let url = filter_search_url_pri(filter, page)?;
     let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text().unwrap());
+    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
     parse_search(url, doc)
 }
 
@@ -158,7 +158,7 @@ pub fn filter_search(filter: FilterResult, page: i32) -> Result<Vec<BasicNovel>,
 pub fn text_search(query: String, page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
     let url = format!("https://www.royalroad.com/fictions/search?title={query}&page={page}");
     let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text().unwrap());
+    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
     parse_search(url, doc)
 }
 
