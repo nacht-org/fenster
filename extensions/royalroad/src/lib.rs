@@ -12,6 +12,8 @@ use kuchiki::{
 use quelle_core::prelude::*;
 use quelle_glue::prelude::*;
 
+pub struct RoyalRoad;
+
 define_meta! {
     let META = {
         id: "en.royalroad",
@@ -125,35 +127,32 @@ fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Result<Vec<Chapte
 }
 
 #[expose]
-pub fn popular_url(page: i32) -> String {
-    popular_url_pri(page)
-}
-
-pub fn popular_url_pri(page: i32) -> String {
-    format!("https://www.royalroad.com/fictions/weekly-popular?page={page}")
-}
-
-#[expose]
-pub fn popular(page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
-    let url = popular_url_pri(page);
-    let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
-
-    let mut novels = vec![];
-    if let Ok(elements) = doc.select(".fiction-list-item") {
-        for item in elements {
-            let novel_url = item.as_node().select_first("a").get_attribute("href");
-            let Some(novel_url) = novel_url else { continue };
-
-            let novel = BasicNovel {
-                title: item.as_node().select_first(".fiction-title").get_text()?,
-                cover: item.as_node().select_first("img").get_attribute("src"),
-                url: META.convert_into_absolute_url(novel_url, Some(&url))?,
-            };
-
-            novels.push(novel);
-        }
+impl Popular for RoyalRoad {
+    fn popular_url(page: i32) -> String {
+        format!("https://www.royalroad.com/fictions/weekly-popular?page={page}")
     }
 
-    Ok(novels)
+    fn popular(page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
+        let url = Self::popular_url(page);
+        let response = Request::get(url.clone()).send()?;
+        let doc = kuchiki::parse_html().one(response.text()?.unwrap());
+
+        let mut novels = vec![];
+        if let Ok(elements) = doc.select(".fiction-list-item") {
+            for item in elements {
+                let novel_url = item.as_node().select_first("a").get_attribute("href");
+                let Some(novel_url) = novel_url else { continue };
+
+                let novel = BasicNovel {
+                    title: item.as_node().select_first(".fiction-title").get_text()?,
+                    cover: item.as_node().select_first("img").get_attribute("src"),
+                    url: META.convert_into_absolute_url(novel_url, Some(&url))?,
+                };
+
+                novels.push(novel);
+            }
+        }
+
+        Ok(novels)
+    }
 }
