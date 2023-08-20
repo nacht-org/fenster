@@ -160,8 +160,13 @@ impl FilterSearch for RoyalRoad {
 
 expose_text!(RoyalRoad);
 impl TextSearch for RoyalRoad {
-    fn text_search(query: String, page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
+    fn text_search_url(query: String, page: i32) -> Result<String, QuelleError> {
         let url = format!("https://www.royalroad.com/fictions/search?title={query}&page={page}");
+        Ok(url)
+    }
+
+    fn text_search(query: String, page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
+        let url = Self::text_search_url(query, page).unwrap();
         let response = Request::get(url.clone()).send()?;
         let doc = kuchiki::parse_html().one(response.text()?.unwrap());
         parse_search(url, doc)

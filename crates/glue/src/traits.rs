@@ -41,6 +41,7 @@ macro_rules! expose_popular {
 }
 
 pub trait TextSearch {
+    fn text_search_url(query: String, page: i32) -> Result<String, QuelleError>;
     fn text_search(query: String, page: i32) -> Result<Vec<BasicNovel>, QuelleError>;
 }
 

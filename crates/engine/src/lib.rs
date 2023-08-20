@@ -96,6 +96,7 @@ impl<D: Send + 'static> RuntimeBuilder<D> {
             fetch_chapter_content: get_func!("fetch_chapter_content"),
             popular_url: get_func_optional!("popular_url"),
             popular: get_func_optional!("popular"),
+            text_search_url: get_func_optional!("text_search_url"),
             text_search: get_func_optional!("text_search"),
             filter_options: get_func_optional!("filter_options"),
             filter_search_url: get_func_optional!("filter_search_url"),
@@ -147,6 +148,7 @@ struct Functions {
     popular_url: Option<TypedFunc<i32, i32>>,
     popular: Option<TypedFunc<i32, i32>>,
 
+    text_search_url: Option<TypedFunc<(i32, i32), i32>>,
     text_search: Option<TypedFunc<(i32, i32), i32>>,
     filter_options: Option<TypedFunc<(), i32>>,
     filter_search_url: Option<TypedFunc<(i32, i32), i32>>,
@@ -328,7 +330,24 @@ where
         self.functions.text_search.is_some()
     }
 
-    async fn call_text_search(&mut self, query: &str, page: i32) -> crate::error::Result<i32> {
+    async fn call_text_search_url(&mut self, query: &str, page: i32) -> error::Result<i32> {
+        if let Some(text_search) = self.functions.text_search_url {
+            let query_ptr = self.write_string(query).await?;
+            let signed_len = text_search
+                .call_async(&mut self.store, (query_ptr, page))
+                .await?;
+            Ok(signed_len)
+        } else {
+            Err(error::Error::NotSupported(error::AffectedFunction::Search))
+        }
+    }
+
+    pub async fn text_search_url(&mut self, query: &str, page: i32) -> error::Result<String> {
+        let signed_len = self.call_text_search_url(query, page).await?;
+        self.parse_string_result::<QuelleError>(signed_len).await
+    }
+
+    async fn call_text_search(&mut self, query: &str, page: i32) -> error::Result<i32> {
         if let Some(text_search) = self.functions.text_search {
             let query_ptr = self.write_string(query).await?;
             let signed_len = text_search
