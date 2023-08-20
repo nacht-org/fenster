@@ -25,62 +25,65 @@ define_meta! {
     };
 }
 
-#[expose]
-pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
-    let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
+expose_basic!(RoyalRoad);
+impl FetchBasic for RoyalRoad {
+    fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
+        let response = Request::get(url.clone()).send()?;
+        let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
-    let volume = Volume {
-        chapters: doc
-            .select("tbody > tr")
-            .map(parse_chapter_list)
-            .map_err(|_| ParseError::ElementNotFound)?
-            .unwrap_or_default(),
-        ..Default::default()
-    };
+        let volume = Volume {
+            chapters: doc
+                .select("tbody > tr")
+                .map(parse_chapter_list)
+                .map_err(|_| ParseError::ElementNotFound)?
+                .unwrap_or_default(),
+            ..Default::default()
+        };
 
-    let author = doc.select_first(".fic-header h4 a").get_text()?;
+        let author = doc.select_first(".fic-header h4 a").get_text()?;
 
-    let novel = Novel {
-        title: doc.select_first(".fic-header h1").get_text()?,
-        authors: vec![author],
-        cover: doc
-            .select_first(".page-content-inner .thumbnail")
-            .get_attribute("src"),
-        description: doc.select(r#".description > div > p"#).collect_text(),
-        status: doc
-            .select_first(".fiction-info > .portlet.row span:nth-child(2)")
-            .map(|node| node.get_text().as_str().into())
-            .unwrap_or_default(),
-        langs: META.langs.clone(),
-        volumes: vec![volume],
-        metadata: doc
-            .select(r#"a.label[href*="tag"]"#)
-            .map(|nodes| {
-                nodes
-                    .map(|node| Metadata::new(String::from("subject"), node.text_contents(), None))
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default(),
-        url,
-    };
+        let novel = Novel {
+            title: doc.select_first(".fic-header h1").get_text()?,
+            authors: vec![author],
+            cover: doc
+                .select_first(".page-content-inner .thumbnail")
+                .get_attribute("src"),
+            description: doc.select(r#".description > div > p"#).collect_text(),
+            status: doc
+                .select_first(".fiction-info > .portlet.row span:nth-child(2)")
+                .map(|node| node.get_text().as_str().into())
+                .unwrap_or_default(),
+            langs: META.langs.clone(),
+            volumes: vec![volume],
+            metadata: doc
+                .select(r#"a.label[href*="tag"]"#)
+                .map(|nodes| {
+                    nodes
+                        .map(|node| {
+                            Metadata::new(String::from("subject"), node.text_contents(), None)
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default(),
+            url,
+        };
 
-    Ok(novel)
-}
+        Ok(novel)
+    }
 
-#[expose]
-pub fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
-    let response = Request::get(url).send()?;
-    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
+    fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
+        let response = Request::get(url).send()?;
+        let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
-    let content = doc
-        .select_first(".chapter-content")
-        .map(|node| node.as_node().outer_html())
-        .ok()
-        .transpose()?
-        .ok_or(QuelleError::ParseFailed(ParseError::ElementNotFound))?;
+        let content = doc
+            .select_first(".chapter-content")
+            .map(|node| node.as_node().outer_html())
+            .ok()
+            .transpose()?
+            .ok_or(QuelleError::ParseFailed(ParseError::ElementNotFound))?;
 
-    Ok(content.into())
+        Ok(content.into())
+    }
 }
 
 fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Result<Vec<Chapter>, QuelleError> {
@@ -126,8 +129,8 @@ fn parse_chapter_list(nodes: Select<Elements<Descendants>>) -> Result<Vec<Chapte
     Ok(chapters)
 }
 
-#[expose]
-impl Popular for RoyalRoad {
+expose_popular!(RoyalRoad);
+impl PopularSearch for RoyalRoad {
     fn popular_url(page: i32) -> String {
         format!("https://www.royalroad.com/fictions/weekly-popular?page={page}")
     }

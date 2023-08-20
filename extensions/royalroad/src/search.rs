@@ -5,7 +5,7 @@ use quelle_glue::prelude::*;
 use serde::Serialize;
 use url::Url;
 
-use crate::META;
+use crate::{RoyalRoad, META};
 
 #[derive(InputField, Serialize, Debug)]
 pub struct FilterOptions {
@@ -32,134 +32,140 @@ pub struct OrderByField {
 impl_to_abi_for_serde!(&FilterOptions);
 impl_from_abi_for_serde!(FilterResult);
 
-#[expose]
-pub fn filter_options() -> &'static FilterOptions {
-    &FILTER_OPTIONS
-}
+expose_filter!(RoyalRoad);
+impl FilterSearch for RoyalRoad {
+    type Options = FilterOptions;
 
-#[expose]
-pub fn filter_search_url(filter: FilterResult, page: i32) -> Result<String, QuelleError> {
-    filter_search_url_pri(filter, page)
-}
-
-fn filter_search_url_pri(filter: FilterResult, page: i32) -> Result<String, QuelleError> {
-    FILTER_OPTIONS
-        .verify_input(&filter)
-        .map_err(QuelleError::FilterVerificationFailed)?;
-
-    // unwrap: This url is static and tested to be valid
-    let mut url = Url::parse("https://www.royalroad.com/fictions/search").unwrap();
-
-    {
-        let mut query = url.query_pairs_mut();
-
-        query.append_pair("page", &format!("{page}"));
-
-        const TAGS_ADD: &'static str = "tagsAdd";
-        const TAGS_REMOVE: &'static str = "tagsRemove";
-
-        if let Some(title) = filter.title {
-            if !title.is_empty() {
-                query.append_pair("title", &title);
-            }
-        }
-
-        if let Some(keyword) = filter.keyword {
-            if !keyword.is_empty() {
-                query.append_pair("keyword", &keyword);
-            }
-        }
-
-        if let Some(author) = filter.author {
-            if !author.is_empty() {
-                query.append_pair("author", &author);
-            }
-        }
-
-        if let Some(genres) = filter.genres {
-            for genre in genres {
-                let name = if genre.remove { TAGS_REMOVE } else { TAGS_ADD };
-                query.append_pair(name, &genre.value);
-            }
-        }
-
-        if let Some(tags) = filter.tags_include {
-            for tag in tags {
-                query.append_pair(TAGS_ADD, &tag.value);
-            }
-        }
-
-        if let Some(tags) = filter.tags_exclude {
-            for tag in tags {
-                query.append_pair(TAGS_REMOVE, &tag.value);
-            }
-        }
-
-        if let Some(warnings) = filter.warnings {
-            for warning in warnings {
-                let name = if warning.remove {
-                    TAGS_REMOVE
-                } else {
-                    TAGS_ADD
-                };
-                query.append_pair(name, &warning.value);
-            }
-        }
-
-        if let Some(page_count) = filter.page_count {
-            if page_count.min > FILTER_OPTIONS.page_count.min {
-                query.append_pair("minPages", &format!("{}", page_count.min));
-            }
-            if page_count.max < FILTER_OPTIONS.page_count.max {
-                query.append_pair("maxPages", &format!("{}", page_count.max));
-            }
-        }
-
-        if let Some(rating) = filter.rating {
-            if rating.min > FILTER_OPTIONS.rating.min {
-                query.append_pair("minRating", &format!("{}", rating.min));
-            }
-            if rating.max > FILTER_OPTIONS.rating.max {
-                query.append_pair("maxRating", &format!("{}", rating.max));
-            }
-        }
-
-        if let Some(statuses) = filter.status {
-            for status in statuses {
-                query.append_pair("status", &status.value);
-            }
-        }
-
-        if let Some(order_by) = filter.order_by.as_ref().map(|v| v.by.as_ref()).flatten() {
-            query.append_pair("orderBy", order_by);
-        }
-
-        if let Some(dir) = filter.order_by.as_ref().map(|v| v.order.as_ref()).flatten() {
-            query.append_pair("dir", dir);
-        }
-
-        if let Some(ty) = filter.novel_type {
-            query.append_pair("type", &ty);
-        }
+    fn filter_options() -> &'static Self::Options {
+        &FILTER_OPTIONS
     }
 
-    Ok(url.into())
+    fn filter_search_url(
+        filter: <Self::Options as InputField>::Type,
+        page: i32,
+    ) -> Result<String, QuelleError> {
+        FILTER_OPTIONS
+            .verify_input(&filter)
+            .map_err(QuelleError::FilterVerificationFailed)?;
+
+        // unwrap: This url is static and tested to be valid
+        let mut url = Url::parse("https://www.royalroad.com/fictions/search").unwrap();
+
+        {
+            let mut query = url.query_pairs_mut();
+
+            query.append_pair("page", &format!("{page}"));
+
+            const TAGS_ADD: &'static str = "tagsAdd";
+            const TAGS_REMOVE: &'static str = "tagsRemove";
+
+            if let Some(title) = filter.title {
+                if !title.is_empty() {
+                    query.append_pair("title", &title);
+                }
+            }
+
+            if let Some(keyword) = filter.keyword {
+                if !keyword.is_empty() {
+                    query.append_pair("keyword", &keyword);
+                }
+            }
+
+            if let Some(author) = filter.author {
+                if !author.is_empty() {
+                    query.append_pair("author", &author);
+                }
+            }
+
+            if let Some(genres) = filter.genres {
+                for genre in genres {
+                    let name = if genre.remove { TAGS_REMOVE } else { TAGS_ADD };
+                    query.append_pair(name, &genre.value);
+                }
+            }
+
+            if let Some(tags) = filter.tags_include {
+                for tag in tags {
+                    query.append_pair(TAGS_ADD, &tag.value);
+                }
+            }
+
+            if let Some(tags) = filter.tags_exclude {
+                for tag in tags {
+                    query.append_pair(TAGS_REMOVE, &tag.value);
+                }
+            }
+
+            if let Some(warnings) = filter.warnings {
+                for warning in warnings {
+                    let name = if warning.remove {
+                        TAGS_REMOVE
+                    } else {
+                        TAGS_ADD
+                    };
+                    query.append_pair(name, &warning.value);
+                }
+            }
+
+            if let Some(page_count) = filter.page_count {
+                if page_count.min > FILTER_OPTIONS.page_count.min {
+                    query.append_pair("minPages", &format!("{}", page_count.min));
+                }
+                if page_count.max < FILTER_OPTIONS.page_count.max {
+                    query.append_pair("maxPages", &format!("{}", page_count.max));
+                }
+            }
+
+            if let Some(rating) = filter.rating {
+                if rating.min > FILTER_OPTIONS.rating.min {
+                    query.append_pair("minRating", &format!("{}", rating.min));
+                }
+                if rating.max > FILTER_OPTIONS.rating.max {
+                    query.append_pair("maxRating", &format!("{}", rating.max));
+                }
+            }
+
+            if let Some(statuses) = filter.status {
+                for status in statuses {
+                    query.append_pair("status", &status.value);
+                }
+            }
+
+            if let Some(order_by) = filter.order_by.as_ref().map(|v| v.by.as_ref()).flatten() {
+                query.append_pair("orderBy", order_by);
+            }
+
+            if let Some(dir) = filter.order_by.as_ref().map(|v| v.order.as_ref()).flatten() {
+                query.append_pair("dir", dir);
+            }
+
+            if let Some(ty) = filter.novel_type {
+                query.append_pair("type", &ty);
+            }
+        }
+
+        Ok(url.into())
+    }
+
+    fn filter_search(
+        filter: <Self::Options as InputField>::Type,
+        page: i32,
+    ) -> Result<Vec<BasicNovel>, QuelleError> {
+        let url = Self::filter_search_url(filter, page)?;
+        let response = Request::get(url.clone()).send()?;
+        let doc = kuchiki::parse_html().one(response.text()?.unwrap());
+        parse_search(url, doc)
+    }
 }
 
-#[expose]
-pub fn filter_search(filter: FilterResult, page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
-    let url = filter_search_url_pri(filter, page)?;
-    let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
-    parse_search(url, doc)
-}
-
-#[expose]
-pub fn text_search(query: String, page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
-    let url = format!("https://www.royalroad.com/fictions/search?title={query}&page={page}");
-    let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
-    parse_search(url, doc)
+expose_text!(RoyalRoad);
+impl TextSearch for RoyalRoad {
+    fn text_search(query: String, page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
+        let url = format!("https://www.royalroad.com/fictions/search?title={query}&page={page}");
+        let response = Request::get(url.clone()).send()?;
+        let doc = kuchiki::parse_html().one(response.text()?.unwrap());
+        parse_search(url, doc)
+    }
 }
 
 fn parse_search(url: String, doc: NodeRef) -> Result<Vec<BasicNovel>, QuelleError> {
