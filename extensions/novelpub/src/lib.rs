@@ -9,6 +9,8 @@ use kuchiki::{traits::TendrilSink, NodeRef};
 use quelle_core::prelude::*;
 use quelle_glue::prelude::*;
 
+pub struct NovelPub;
+
 define_meta! {
     let META = {
         id: "en.novelpub",
@@ -20,41 +22,62 @@ define_meta! {
     };
 }
 
-#[expose]
-pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
-    let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
+expose_basic!(NovelPub);
+impl FetchBasic for NovelPub {
+    fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
+        let response = Request::get(url.clone()).send()?;
+        let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
-    let mut status = NovelStatus::default();
-    if let Some(nodes) = doc.select(".header-stats span").ok() {
-        for node in nodes {
-            let label = node.as_node().select_first("small");
-            if let Ok(label) = label {
-                let text = label.text_contents().to_ascii_lowercase();
-                if text == "status" {
-                    status = node
-                        .as_node()
-                        .select_first("strong")
-                        .map(|node| node.text_contents().as_str().into())
-                        .unwrap_or_default();
+        let mut status = NovelStatus::default();
+        if let Some(nodes) = doc.select(".header-stats span").ok() {
+            for node in nodes {
+                let label = node.as_node().select_first("small");
+                if let Ok(label) = label {
+                    let text = label.text_contents().to_ascii_lowercase();
+                    if text == "status" {
+                        status = node
+                            .as_node()
+                            .select_first("strong")
+                            .map(|node| node.text_contents().as_str().into())
+                            .unwrap_or_default();
+                    }
                 }
             }
         }
+
+        let novel = Novel {
+            title: doc.select_first(".novel-title").get_text()?,
+            authors: doc.select(".author a").collect_text(),
+            description: doc.select(".summary .content p").collect_text(),
+            cover: doc.select_first(".cover img").get_attribute("data-src"),
+            status,
+            volumes: collect_toc(&url)?,
+            metadata: collect_metadata(&doc),
+            langs: META.langs.clone(),
+            url,
+        };
+
+        Ok(novel)
     }
 
-    let novel = Novel {
-        title: doc.select_first(".novel-title").get_text()?,
-        authors: doc.select(".author a").collect_text(),
-        description: doc.select(".summary .content p").collect_text(),
-        cover: doc.select_first(".cover img").get_attribute("data-src"),
-        status,
-        volumes: collect_toc(&url)?,
-        metadata: collect_metadata(&doc),
-        langs: META.langs.clone(),
-        url,
-    };
+    fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
+        let response = Request::get(url).send()?;
+        let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
-    Ok(novel)
+        let content = doc
+            .select_first("#chapter-container")
+            .map_err(|_| ParseError::ElementNotFound)?;
+
+        doc.select(".adsbox, .adsbygoogle").detach_all();
+        doc.select("strong > strong").detach_all();
+        doc.select("strong i i").detach_all();
+        doc.select("p > sub").detach_all();
+
+        Ok(Content {
+            data: content.as_node().outer_html()?,
+            ..Default::default()
+        })
+    }
 }
 
 fn collect_metadata(doc: &NodeRef) -> Vec<Metadata> {
@@ -184,62 +207,39 @@ fn toc_url(current: &str, page: usize) -> String {
     format!("{stripped}/chapters/page-{page}")
 }
 
-#[expose]
-pub fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
-    let response = Request::get(url).send()?;
-    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
-
-    let content = doc
-        .select_first("#chapter-container")
-        .map_err(|_| ParseError::ElementNotFound)?;
-
-    doc.select(".adsbox, .adsbygoogle").detach_all();
-    doc.select("strong > strong").detach_all();
-    doc.select("strong i i").detach_all();
-    doc.select("p > sub").detach_all();
-
-    Ok(Content {
-        data: content.as_node().outer_html()?,
-        ..Default::default()
-    })
-}
-
-#[expose]
-pub fn popular_url(page: i32) -> String {
-    popular_url_private(page)
-}
-
-pub fn popular_url_private(page: i32) -> String {
-    format!("https://www.novelpub.com/genre/all/popular/all/{page}")
-}
-
-#[expose]
-pub fn popular(page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
-    let url = popular_url_private(page);
-    let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
-
-    let mut novels = vec![];
-    if let Ok(elements) = doc.select(".novel-list > .novel-item") {
-        for item in elements {
-            let a = item.as_node().select_first(".novel-title a");
-            let Ok(a) = a else { continue };
-
-            let novel_url = a.get_attribute("href");
-            let Some(novel_url) = novel_url else { continue };
-
-            let novel = BasicNovel {
-                title: a.get_attribute("title").unwrap_or_default(),
-                cover: item
-                    .as_node()
-                    .select_first(".novel-cover img")
-                    .get_attribute("data-src"),
-                url: META.convert_into_absolute_url(novel_url, Some(&url))?,
-            };
-
-            novels.push(novel);
-        }
+expose_popular!(NovelPub);
+impl PopularSearch for NovelPub {
+    fn popular_url(page: i32) -> String {
+        format!("https://www.novelpub.com/genre/all/popular/all/{page}")
     }
 
-    Ok(novels)
+    fn popular(page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
+        let url = Self::popular_url(page);
+        let response = Request::get(url.clone()).send()?;
+        let doc = kuchiki::parse_html().one(response.text()?.unwrap());
+
+        let mut novels = vec![];
+        if let Ok(elements) = doc.select(".novel-list > .novel-item") {
+            for item in elements {
+                let a = item.as_node().select_first(".novel-title a");
+                let Ok(a) = a else { continue };
+
+                let novel_url = a.get_attribute("href");
+                let Some(novel_url) = novel_url else { continue };
+
+                let novel = BasicNovel {
+                    title: a.get_attribute("title").unwrap_or_default(),
+                    cover: item
+                        .as_node()
+                        .select_first(".novel-cover img")
+                        .get_attribute("data-src"),
+                    url: META.convert_into_absolute_url(novel_url, Some(&url))?,
+                };
+
+                novels.push(novel);
+            }
+        }
+
+        Ok(novels)
+    }
 }
