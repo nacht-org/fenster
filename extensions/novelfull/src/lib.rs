@@ -8,6 +8,8 @@ use kuchiki::{traits::TendrilSink, NodeRef};
 use quelle_core::prelude::*;
 use quelle_glue::prelude::*;
 
+pub struct NovelFull;
+
 define_meta! {
     let META = {
         id: "en.novelfull",
@@ -19,30 +21,59 @@ define_meta! {
     };
 }
 
-#[expose]
-pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
-    let response = Request::get(url.clone()).send()?;
-    let content = response.text()?.unwrap();
-    let has_chapter_option_url = content.find("var ajaxChapterOptionUrl =").is_some();
-    let doc = kuchiki::parse_html().one(content);
+expose_basic!(NovelFull);
+impl FetchBasic for NovelFull {
+    fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
+        let response = Request::get(url.clone()).send()?;
+        let content = response.text()?.unwrap();
+        let has_chapter_option_url = content.find("var ajaxChapterOptionUrl =").is_some();
+        let doc = kuchiki::parse_html().one(content);
 
-    let novel = Novel {
-        title: doc.select_first(".title").get_text()?,
-        authors: doc.select("a[href^='/author']").collect_text(),
-        cover: doc.select_first(".book img").get_attribute("src"),
-        description: doc.select(".desc-text").collect_text(),
-        volumes: volumes(&url, &doc, has_chapter_option_url)?,
-        metadata: metadata(&doc)?,
-        status: doc
-            .select_first("a[href^='/status/']")
-            .get_text()
-            .map(|value| NovelStatus::from(value.as_ref()))
-            .unwrap_or_default(),
-        langs: META.langs.clone(),
-        url: url,
-    };
+        let novel = Novel {
+            title: doc.select_first(".title").get_text()?,
+            authors: doc.select("a[href^='/author']").collect_text(),
+            cover: doc.select_first(".book img").get_attribute("src"),
+            description: doc.select(".desc-text").collect_text(),
+            volumes: volumes(&url, &doc, has_chapter_option_url)?,
+            metadata: metadata(&doc)?,
+            status: doc
+                .select_first("a[href^='/status/']")
+                .get_text()
+                .map(|value| NovelStatus::from(value.as_ref()))
+                .unwrap_or_default(),
+            langs: META.langs.clone(),
+            url: url,
+        };
 
-    Ok(novel)
+        Ok(novel)
+    }
+
+    fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
+        let response = Request::get(url).send()?;
+        let doc = kuchiki::parse_html().one(response.text()?.unwrap());
+
+        let content = doc
+            .select_first("#chr-content, #chapter-content")
+            .map_err(|_| ParseError::ElementNotFound)?;
+
+        content.attributes.borrow_mut().map.clear();
+
+        let bad_selectors = [
+            ".ads, .ads-holder, .ads-middle",
+            "div[align='left']",
+            "img[src*='proxy?container=focus']",
+            "div[id^='pf-']",
+        ];
+
+        for selector in bad_selectors {
+            content.as_node().select(selector).detach_all();
+        }
+
+        Ok(Content {
+            data: content.as_node().outer_html()?,
+            ..Default::default()
+        })
+    }
 }
 
 fn metadata(doc: &NodeRef) -> Result<Vec<Metadata>, QuelleError> {
@@ -109,32 +140,4 @@ fn volumes(
     }
 
     Ok(vec![volume])
-}
-
-#[expose]
-pub fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
-    let response = Request::get(url).send()?;
-    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
-
-    let content = doc
-        .select_first("#chr-content, #chapter-content")
-        .map_err(|_| ParseError::ElementNotFound)?;
-
-    content.attributes.borrow_mut().map.clear();
-
-    let bad_selectors = [
-        ".ads, .ads-holder, .ads-middle",
-        "div[align='left']",
-        "img[src*='proxy?container=focus']",
-        "div[id^='pf-']",
-    ];
-
-    for selector in bad_selectors {
-        content.as_node().select(selector).detach_all();
-    }
-
-    Ok(Content {
-        data: content.as_node().outer_html()?,
-        ..Default::default()
-    })
 }
