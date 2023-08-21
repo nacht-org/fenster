@@ -10,6 +10,8 @@ use quelle_core::prelude::*;
 use quelle_glue::prelude::*;
 use regex::Regex;
 
+pub struct CreativeNovels;
+
 define_meta! {
     let META = {
         id: "en.creativenovels",
@@ -21,42 +23,87 @@ define_meta! {
     };
 }
 
-#[expose]
-pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
-    let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
+expose_basic!(CreativeNovels);
+impl FetchBasic for CreativeNovels {
+    fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
+        let response = Request::get(url.clone()).send()?;
+        let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
-    let author = doc
-        .select_first(".x-bar-container > [class*='14']")
-        .get_text()?;
+        let author = doc
+            .select_first(".x-bar-container > [class*='14']")
+            .get_text()?;
 
-    let cover_element = doc.select_first("img.book_cover").ok();
-    let cover = cover_element
-        .map(|node| match node.get_attribute("src") {
-            Some(value) => Some(value),
-            None => node.get_attribute("data-cfsrc"),
-        })
-        .flatten();
+        let cover_element = doc.select_first("img.book_cover").ok();
+        let cover = cover_element
+            .map(|node| match node.get_attribute("src") {
+                Some(value) => Some(value),
+                None => node.get_attribute("data-cfsrc"),
+            })
+            .flatten();
 
-    let novel = Novel {
-        title: doc
-            .select_first(".x-bar-container > [class*='e12']")
-            .get_text()?,
-        authors: vec![author],
-        cover,
-        description: doc.select(".novel_page_synopsis > p").collect_text(),
-        volumes: collect_volumes(&doc)?,
-        metadata: collect_metadata(&doc)?,
-        langs: META.langs.clone(),
-        status: doc
-            .select_first(".novel_status")
-            .get_text()?
-            .as_str()
-            .into(),
-        url,
-    };
+        let novel = Novel {
+            title: doc
+                .select_first(".x-bar-container > [class*='e12']")
+                .get_text()?,
+            authors: vec![author],
+            cover,
+            description: doc.select(".novel_page_synopsis > p").collect_text(),
+            volumes: collect_volumes(&doc)?,
+            metadata: collect_metadata(&doc)?,
+            langs: META.langs.clone(),
+            status: doc
+                .select_first(".novel_status")
+                .get_text()?
+                .as_str()
+                .into(),
+            url,
+        };
 
-    Ok(novel)
+        Ok(novel)
+    }
+
+    fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
+        let response = Request::get(url.clone()).send()?;
+        let doc = kuchiki::parse_html().one(response.text()?.unwrap());
+
+        let content = doc
+            .select_first("article .entry-content")
+            .map_err(|_| QuelleError::ParseFailed(ParseError::ElementNotFound))?;
+
+        content.attributes.borrow_mut().map.clear();
+
+        const BAD_SELECTORS: [&str; 5] = [
+            ".announcements_crn",
+            ".support-placement",
+            "span[style*='color:transparent']",
+            ".count_gloss",
+            ".gloss_fine",
+        ];
+
+        content
+            .as_node()
+            .select(&BAD_SELECTORS.join(","))
+            .detach_all();
+
+        let elements = content
+            .as_node()
+            .select("span[data-preserver-spaces='true'], span[id^='tooltip']");
+        if let Ok(elements) = elements {
+            for element in elements {
+                for child in element.as_node().children() {
+                    element.as_node().insert_before(child);
+                }
+                element.as_node().detach();
+            }
+        }
+
+        let content = content
+            .as_node()
+            .outer_html()
+            .map(|c| c.replace("\n", ""))?;
+
+        Ok(content.into())
+    }
 }
 
 fn collect_volumes(doc: &NodeRef) -> Result<Vec<Volume>, QuelleError> {
@@ -163,48 +210,4 @@ fn collect_metadata(doc: &NodeRef) -> Result<Vec<Metadata>, QuelleError> {
     }
 
     Ok(metadata)
-}
-
-#[expose]
-pub fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
-    let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
-
-    let content = doc
-        .select_first("article .entry-content")
-        .map_err(|_| QuelleError::ParseFailed(ParseError::ElementNotFound))?;
-
-    content.attributes.borrow_mut().map.clear();
-
-    const BAD_SELECTORS: [&str; 5] = [
-        ".announcements_crn",
-        ".support-placement",
-        "span[style*='color:transparent']",
-        ".count_gloss",
-        ".gloss_fine",
-    ];
-
-    content
-        .as_node()
-        .select(&BAD_SELECTORS.join(","))
-        .detach_all();
-
-    let elements = content
-        .as_node()
-        .select("span[data-preserver-spaces='true'], span[id^='tooltip']");
-    if let Ok(elements) = elements {
-        for element in elements {
-            for child in element.as_node().children() {
-                element.as_node().insert_before(child);
-            }
-            element.as_node().detach();
-        }
-    }
-
-    let content = content
-        .as_node()
-        .outer_html()
-        .map(|c| c.replace("\n", ""))?;
-
-    Ok(content.into())
 }
