@@ -9,6 +9,8 @@ use kuchiki::{traits::TendrilSink, NodeRef};
 use quelle_core::prelude::*;
 use quelle_glue::prelude::*;
 
+pub struct ScribbleHub;
+
 define_meta! {
     let META = {
         id: "en.scribblehub",
@@ -20,32 +22,48 @@ define_meta! {
     };
 }
 
-#[expose]
-pub fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
-    let response = Request::get(url.clone()).send()?;
-    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
+expose_basic!(ScribbleHub);
+impl FetchBasic for ScribbleHub {
+    fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
+        let response = Request::get(url.clone()).send()?;
+        let doc = kuchiki::parse_html().one(response.text()?.unwrap());
 
-    let id = url
-        .split("/")
-        .nth(4)
-        .ok_or_else(|| ParseError::Other(String::from("The url does not have an id")))?;
+        let id = url
+            .split("/")
+            .nth(4)
+            .ok_or_else(|| ParseError::Other(String::from("The url does not have an id")))?;
 
-    let novel = Novel {
-        title: doc.select_first("div.fic_title").get_text()?,
-        authors: vec![doc.select_first("span.auth_name_fic").get_text()?],
-        description: doc.select(".wi_fic_desc > p").collect_text(),
-        langs: META.langs.clone(),
-        cover: doc.select_first(".fic_image img").get_attribute("src"),
-        status: doc
-            .select_first(".widget_fic_similar > li:last-child > span:last-child")
-            .map(|node| node.get_text().as_str().into())
-            .unwrap_or_default(),
-        volumes: volumes(id)?,
-        metadata: metadata(&doc)?,
-        url,
-    };
+        let novel = Novel {
+            title: doc.select_first("div.fic_title").get_text()?,
+            authors: vec![doc.select_first("span.auth_name_fic").get_text()?],
+            description: doc.select(".wi_fic_desc > p").collect_text(),
+            langs: META.langs.clone(),
+            cover: doc.select_first(".fic_image img").get_attribute("src"),
+            status: doc
+                .select_first(".widget_fic_similar > li:last-child > span:last-child")
+                .map(|node| node.get_text().as_str().into())
+                .unwrap_or_default(),
+            volumes: volumes(id)?,
+            metadata: metadata(&doc)?,
+            url,
+        };
 
-    Ok(novel)
+        Ok(novel)
+    }
+
+    fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
+        let response = Request::get(url).send()?;
+        let doc = kuchiki::parse_html().one(response.text()?.unwrap());
+
+        let content = doc
+            .select_first("#chp_raw")
+            .map(|node| node.as_node().outer_html())
+            .ok()
+            .transpose()?
+            .ok_or(QuelleError::ParseFailed(ParseError::ElementNotFound))?;
+
+        Ok(content.into())
+    }
 }
 
 fn metadata(doc: &NodeRef) -> Result<Vec<Metadata>, QuelleError> {
@@ -135,19 +153,4 @@ fn volumes(id: &str) -> Result<Vec<Volume>, QuelleError> {
     }
 
     Ok(vec![volume])
-}
-
-#[expose]
-pub fn fetch_chapter_content(url: String) -> Result<Content, QuelleError> {
-    let response = Request::get(url).send()?;
-    let doc = kuchiki::parse_html().one(response.text()?.unwrap());
-
-    let content = doc
-        .select_first("#chp_raw")
-        .map(|node| node.as_node().outer_html())
-        .ok()
-        .transpose()?
-        .ok_or(QuelleError::ParseFailed(ParseError::ElementNotFound))?;
-
-    Ok(content.into())
 }
