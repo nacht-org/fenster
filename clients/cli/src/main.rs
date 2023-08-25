@@ -180,7 +180,7 @@ async fn run(cli: Cli) -> anyhow::Result<()> {
             info!("Loaded global data");
 
             let path = global
-                .novel_path_by_url(&url.to_string())
+                .novel_path_from_url(&url.to_string())
                 .ok_or(anyhow!("The novel does not exist"))?;
 
             info!("Found novel data at '{}'.", path.display());

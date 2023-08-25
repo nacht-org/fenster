@@ -1,13 +1,6 @@
+use crate::{error::PersistResult, global::Global, novel::PersistNovel, PersistOptions};
 use quelle_core::prelude::Meta;
-use std::{
-    fs::{File, OpenOptions},
-    io::{BufReader, BufWriter},
-    path::PathBuf,
-};
-
-use crate::{
-    create_parent_all, error::PersistResult, global::Global, novel::PersistNovel, PersistOptions,
-};
+use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct Persist {
@@ -30,30 +23,10 @@ impl Persist {
     }
 
     pub fn read_global(&self) -> PersistResult<Global> {
-        let data = if self.options.global_path.exists() {
-            let file = File::open(&self.options.global_path)?;
-            let reader = BufReader::new(file);
-            serde_json::from_reader(reader)?
-        } else {
-            Default::default()
-        };
-
-        Ok(data)
+        Global::open(&self.options.global_path)
     }
 
     pub fn save_global(&self, global: &Global) -> PersistResult<()> {
-        let path = self.options.global_path.as_path();
-        create_parent_all(path)?;
-
-        let file = OpenOptions::new()
-            .create(true)
-            .truncate(true)
-            .write(true)
-            .open(path)?;
-
-        let writer = BufWriter::new(file);
-        serde_json::to_writer(writer, &global)?;
-
-        Ok(())
+        global.save(&self.options.global_path)
     }
 }
