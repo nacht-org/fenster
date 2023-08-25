@@ -1,7 +1,6 @@
 mod args;
 mod bundle;
 mod download;
-mod lock;
 
 use std::{
     fs::File,
@@ -15,9 +14,9 @@ use anyhow::{anyhow, bail};
 use args::{CoverAction, DownloadRange};
 use clap::{Parser, Subcommand};
 use download::DownloadOptions;
-use lock::Lock;
 use log::{info, warn};
 use quelle_engine::Runtime;
+use quelle_lock::Lock;
 use quelle_persist::{create_parent_all, Persist, PersistOptions};
 use simplelog::{Config, LevelFilter, TermLogger};
 use url::Url;

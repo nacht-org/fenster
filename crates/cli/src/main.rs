@@ -1,12 +1,10 @@
 mod build;
 mod cache;
-mod lock;
 
-use std::{fs::File, io::BufReader, path::PathBuf};
+use std::path::PathBuf;
 
 use cache::{Cache, CachingImpl};
 use clap::{Parser, Subcommand};
-use lock::Lock;
 use quelle_core::prelude::{ExtensionConfig, Request};
 use quelle_engine::Runtime;
 use simplelog::{Config, LevelFilter, TermLogger};
@@ -58,7 +56,7 @@ enum Commands {
         page: i32,
     },
 
-    /// Build the extensions
+    /// Build the extensions into wasm
     Build {
         /// Build this extension only.
         #[arg(short, long)]
@@ -73,13 +71,16 @@ enum Commands {
         release: bool,
     },
 
+    /// Read the compiled wasm files and create a record
     Lock {
         /// The directory to find wasm extensions
         #[arg(short, long, default_value = ".")]
         dir: PathBuf,
     },
 
+    /// Check if a given url belongs to a source
     Detect {
+        /// The url of a source to check
         url: Url,
 
         /// The path to the lock file
@@ -87,11 +88,13 @@ enum Commands {
         lock: PathBuf,
     },
 
+    /// Functionality related to cache
     Cache {
-        /// Download and cache
+        /// Download and cache the response
         #[arg(short, long)]
         url: Option<String>,
 
+        /// Remove all items from the cache
         #[arg(short, long)]
         clear: bool,
     },
@@ -189,8 +192,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Commands::Detect { url, lock } => {
-            let file = File::open(lock)?;
-            let lock: Lock = serde_json::from_reader(BufReader::new(file))?;
+            let lock = quelle_lock::Lock::open(&lock)?;
 
             let extension = lock
                 .extensions
@@ -211,7 +213,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             build::build(extension, out, release)?;
         }
         Commands::Lock { dir } => {
-            lock::lock(dir).await?;
+            quelle_lock::Lock::generate(&dir).await?;
         }
         Commands::Cache { url, clear } => {
             if let Some(url) = url {

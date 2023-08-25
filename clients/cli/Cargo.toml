@@ -15,12 +15,13 @@ quelle_bundle = { version = "0.1.0", path = "../../crates/bundle", features = [
 quelle_core = { version = "0.1.0", path = "../../crates/core" }
 quelle_engine = { version = "0.1.0", path = "../../crates/engine" }
 quelle_persist = { version = "0.1.0", path = "../../crates/persist" }
+quelle_lock = { version = "0.1.0", path = "../../crates/lock" }
 itertools = "0.11.0"
 log = "0.4.17"
 mime_guess = "2.0.4"
 reqwest = { version = "0.11.13", features = ["blocking"] }
 serde = { version = "1.0.147", features = ["derive"] }
-serde_json = "1.0.88"
+serde_json = { workspace = true }
 simplelog = "0.12.0"
 slug = "0.1.4"
 toml = "0.7.2"

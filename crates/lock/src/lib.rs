@@ -3,7 +3,7 @@ use std::{
     ffi::OsStr,
     fs::{self, File},
     io::BufReader,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use anyhow::{anyhow, bail, Context};
@@ -23,7 +23,7 @@ pub struct Extension {
     pub version: String,
     pub base_urls: Vec<String>,
     pub langs: Vec<String>,
-    pub path: String,
+    pub path: PathBuf,
 }
 
 impl Lock {
@@ -75,7 +75,7 @@ impl Lock {
                 version: meta.version,
                 base_urls: meta.base_urls,
                 langs: meta.langs,
-                path: entry.path().as_os_str().to_string_lossy().to_string(),
+                path: entry.path(),
             };
 
             extensions.insert(meta.id, extension);
