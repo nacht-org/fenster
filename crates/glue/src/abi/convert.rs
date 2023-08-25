@@ -62,7 +62,7 @@ macro_rules! impl_from_abi_for_serde {
             fn from_wasm_abi(value: Self::Type) -> Self {
                 let len = $crate::abi::stack_pop() as usize;
                 let bytes = unsafe { Vec::from_raw_parts(value, len, len) };
-                serde_json::from_slice(&bytes).unwrap()
+                serde_json::from_slice(&bytes).unwrap() // FIXME: unwrap must be removed
             }
         }
     };
