@@ -136,10 +136,10 @@ pub fn preface_content(_meta: Option<&Meta>, novel: &Novel) -> String {
     };
 
     let metadata = {
-        let mut metadata_by_tag = HashMap::<String, Vec<&Metadata>>::new();
+        let mut metadata_by_tag = HashMap::<&str, Vec<&Metadata>>::new();
         for metadata in &novel.metadata {
             metadata_by_tag
-                .entry(metadata.name.clone())
+                .entry(&metadata.name)
                 .or_insert(vec![])
                 .push(metadata);
         }
