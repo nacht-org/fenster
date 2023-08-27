@@ -21,6 +21,20 @@ impl TextSearch for NovelFull {
     }
 }
 
+expose_popular!(NovelFull);
+impl PopularSearch for NovelFull {
+    fn popular_url(page: i32) -> String {
+        format!("https://novelfull.com/most-popular?page={page}")
+    }
+
+    fn popular(page: i32) -> Result<Vec<BasicNovel>, QuelleError> {
+        let url = Self::popular_url(page);
+        let response = Request::get(url.clone()).send()?;
+        let doc = kuchiki::parse_html().one(response.text()?.unwrap());
+        parse_search(url, doc)
+    }
+}
+
 fn parse_search(url: String, doc: NodeRef) -> Result<Vec<BasicNovel>, QuelleError> {
     // The search is limited to 20 novels per page
     let mut novels = Vec::with_capacity(20);
