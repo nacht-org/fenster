@@ -43,10 +43,45 @@ impl Global {
     }
 
     pub fn novel_path_from_url(&self, url: &str) -> Option<&Path> {
-        self.novels.get(url).map(AsRef::as_ref)
+        if let Some(value) = self.novels.get(url).map(AsRef::as_ref) {
+            return Some(value);
+        }
+
+        if let Some(url) = url.strip_suffix("/") {
+            if let Some(value) = self.novels.get(url).map(AsRef::as_ref) {
+                return Some(value);
+            }
+        }
+
+        None
     }
 
     pub fn insert_novel(&mut self, url: String, path: PathBuf) {
         self.novels.insert(url, path);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::{Path, PathBuf};
+
+    use super::Global;
+
+    #[test]
+    fn should_return_path_with_or_without_trailing_slash() {
+        let mut global = Global::default();
+        global.insert_novel(
+            String::from("https://example.com/novel/123"),
+            PathBuf::from("/novels/123"),
+        );
+
+        assert_eq!(
+            global.novel_path_from_url("https://example.com/novel/123"),
+            Some(Path::new("/novels/123"))
+        );
+        assert_eq!(
+            global.novel_path_from_url("https://example.com/novel/123/"),
+            Some(Path::new("/novels/123"))
+        );
     }
 }
