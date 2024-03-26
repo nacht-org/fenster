@@ -186,7 +186,8 @@ where
 
         self.functions
             .setup
-            .unwrap_or(self.functions.setup_default)
+            .as_ref()
+            .unwrap_or(&self.functions.setup_default)
             .call_async(&mut self.store, config)
             .await?;
 
@@ -269,7 +270,7 @@ where
     }
 
     pub async fn popular_url(&mut self, page: i32) -> crate::error::Result<String> {
-        if let Some(popular_url) = self.functions.popular_url {
+        if let Some(popular_url) = self.functions.popular_url.as_ref() {
             let offset = popular_url.call_async(&mut self.store, page).await?;
             let bytes = self.read_bytes(offset).await?;
             let string = String::from_utf8_lossy(bytes).to_string();
@@ -284,7 +285,7 @@ where
     }
 
     pub async unsafe fn popular_url_memloc(&mut self, page: i32) -> error::Result<MemLoc> {
-        if let Some(popular_url) = self.functions.popular_url {
+        if let Some(popular_url) = self.functions.popular_url.as_ref() {
             let offset = popular_url.call_async(&mut self.store, page).await?;
             let len = self.stack_pop().await?;
             let ptr = self.memory.data_ptr(&self.store).offset(offset as isize);
@@ -295,7 +296,7 @@ where
     }
 
     async fn call_popular(&mut self, page: i32) -> error::Result<i32> {
-        if let Some(popular) = self.functions.popular {
+        if let Some(popular) = self.functions.popular.as_ref() {
             popular
                 .call_async(&mut self.store, page)
                 .await
@@ -331,7 +332,7 @@ where
     }
 
     async fn call_text_search_url(&mut self, query: &str, page: i32) -> error::Result<i32> {
-        if let Some(text_search) = self.functions.text_search_url {
+        if let Some(text_search) = self.functions.text_search_url.clone() {
             let query_ptr = self.write_string(query).await?;
             let signed_len = text_search
                 .call_async(&mut self.store, (query_ptr, page))
@@ -348,7 +349,7 @@ where
     }
 
     async fn call_text_search(&mut self, query: &str, page: i32) -> error::Result<i32> {
-        if let Some(text_search) = self.functions.text_search {
+        if let Some(text_search) = self.functions.text_search.clone() {
             let query_ptr = self.write_string(query).await?;
             let signed_len = text_search
                 .call_async(&mut self.store, (query_ptr, page))
@@ -393,8 +394,9 @@ where
     }
 
     pub async fn filter_options(&mut self) -> error::Result<FieldMap> {
-        let Some(filter_options) = self.functions.filter_options
-            else { return Err(error::Error::NotSupported(error::AffectedFunction::Search)) };
+        let Some(filter_options) = self.functions.filter_options.clone() else {
+            return Err(error::Error::NotSupported(error::AffectedFunction::Search));
+        };
 
         let offset = filter_options.call_async(&mut self.store, ()).await?;
         let len = self.stack_pop().await?;
@@ -405,8 +407,9 @@ where
     }
 
     pub async fn filter_search_url(&mut self, params: &str, page: i32) -> error::Result<String> {
-        let Some(filter_search_url) = self.functions.filter_search_url
-            else { return Err(error::Error::NotSupported(error::AffectedFunction::Search)) };
+        let Some(filter_search_url) = self.functions.filter_search_url.clone() else {
+            return Err(error::Error::NotSupported(error::AffectedFunction::Search));
+        };
 
         let params_ptr = self.write_string(params).await?;
         let len = filter_search_url
@@ -421,8 +424,9 @@ where
         params: &str,
         page: i32,
     ) -> error::Result<Vec<BasicNovel>> {
-        let Some(filter_search) = self.functions.filter_search
-            else { return Err(error::Error::NotSupported(error::AffectedFunction::Search)) };
+        let Some(filter_search) = self.functions.filter_search.clone() else {
+            return Err(error::Error::NotSupported(error::AffectedFunction::Search));
+        };
 
         let params_ptr = self.write_string(params).await?;
         let len = filter_search
