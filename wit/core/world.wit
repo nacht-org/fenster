@@ -1,0 +1,85 @@
+package quelle:core@0.1.0;
+
+interface source {
+    record source-meta {
+        id: string,
+        name: string,
+        langs: list<string>,
+        version: string,
+        base-urls: list<string>,
+        rds: list<reading-direction>,
+        attrs: list<source-attr>,
+    }
+
+    enum reading-direction {
+        ltr,
+        rtl,
+    }
+
+    enum source-attr {
+        fanfiction,
+    }
+}
+
+interface novel {
+    record novel {
+        url: string,
+        authors: list<string>,
+        title: string,
+        cover: option<string>,
+        description: list<string>,
+        volumes: list<volume>,
+        metadata: list<metadata>,
+        status: novel-status,
+        langs: list<string>,
+    }
+
+    enum novel-status {
+        ongoing,
+        hiatus,
+        completed,
+        stub,
+        dropped,
+        unknown,
+    }
+
+    record basic-novel {
+        title: string,
+        cover: option<string>,
+        url: string,
+    }
+
+    record volume {
+        name: string,
+        index: s32,
+        chapters: list<chapter>,
+    }
+
+    record chapter {
+        title: string,
+        index: s32,
+        url: string,
+        updated-at: option<string>,
+    }
+
+    record metadata {
+        name: string,
+        value: string,
+        ns: namespace,
+        others: list<tuple<string, string>>,
+    }
+
+    enum namespace {
+        dc,
+        opf,
+    }
+
+    record chapter-content {
+        data: string,
+    }
+}
+
+world quelle {
+    export novel;
+    export source;
+}

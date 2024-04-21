@@ -1,0 +1,20 @@
+[package]
+name = "extension"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+quelle_core = { path = "../core" }
+wit-bindgen-rt = { version = "0.24.0", features = ["bitflags"] }
+
+[package.metadata.component]
+package = "quelle:extension"
+
+[package.metadata.component.target]
+path = "../../wit/extension/world.wit"
+world = "extension"
+
+[package.metadata.component.target.dependencies]
+"quelle:core" = { path = "../../wit/core" }

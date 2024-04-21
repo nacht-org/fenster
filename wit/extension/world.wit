@@ -1,0 +1,30 @@
+package quelle:extension@0.1.0;
+
+use quelle:core/source@0.1.0;
+use quelle:core/novel@0.1.0;
+
+interface meta {
+    use source.{source-meta};
+
+    record extension-options {}
+
+    extension-info: func () -> source-meta;
+    setup: func (options: extension-options) -> result<_, string>;
+}
+
+interface instance {
+    use novel.{novel, chapter-content};
+
+    record source-options {}
+
+    resource source {
+        constructor(options: source-options);
+        novel-info: func(url: string) -> result<novel, string>;
+        chapter-content: func (url: string) -> result<chapter-content, string>;
+    }
+}
+
+world extension {
+    export meta;
+    export instance;
+}

@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
     "crates/bundle",
     "crates/cli",
@@ -9,6 +10,7 @@ members = [
     "crates/glue_derive",
     "crates/lock",
     "crates/persist",
+    "crates/extension",
     "extensions/novelpub",
     "extensions/royalroad",
     "extensions/creativenovels",
