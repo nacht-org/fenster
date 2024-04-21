@@ -1,0 +1,66 @@
+package quelle:http@0.1.0;
+
+interface main {
+    enum method {
+        get,
+        post,
+        put,
+        delete,
+        patch,
+        head,
+        options,
+    }
+
+    record request {
+        method: method,
+        url: string,
+        params: option<list<u8>>,
+        data: option<request-body>,
+        headers: option<list<u8>>,
+    }
+
+    variant request-body {
+        form(list<tuple<string, form-part>>),
+    }
+    
+    variant form-part {
+        text(string),
+        data(data-part),
+    }
+
+    record data-part {
+        data: list<u8>,
+        name: option<string>,
+        content-type: option<string>,
+    }
+
+    record response {
+        status: u16,
+        data: option<list<u8>>,
+        headers: option<list<tuple<string, string>>>,
+    }
+
+    record response-error {
+        status: option<u16>,
+        kind: response-error-kind,
+        response: option<response>,
+        message: string,
+    }
+
+    enum response-error-kind {
+        bad-response,
+        connection-error,
+        connection-timeout,
+        receive-timeout,
+        request-cancelled,
+        send-timeout,
+    }
+
+    resource client {
+        request: func(request: request) -> result<response, response-error>;
+    }
+}
+
+world http {
+    export main;
+}

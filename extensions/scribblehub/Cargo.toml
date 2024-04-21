@@ -10,6 +10,7 @@ crate-type = ['cdylib']
 [dependencies]
 quelle_core = { path = "../../crates/core" }
 quelle_glue = { path = "../../crates/glue" }
+quelle_extension = { path = "../../crates/extension" }
 kuchiki = { workspace = true }
 serde_json = { workspace = true }
 once_cell = { workspace = true }

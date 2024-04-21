@@ -16,7 +16,7 @@ members = [
     "extensions/creativenovels",
     "extensions/scribblehub",
     "extensions/novelfull",
-    "clients/cli",
+    "clients/cli", "crates/http",
 ]
 
 [workspace.dependencies]

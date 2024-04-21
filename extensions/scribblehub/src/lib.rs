@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use chrono::NaiveDateTime;
 use kuchiki::{traits::TendrilSink, NodeRef};
 use quelle_core::prelude::*;
+use quelle_extension::ExtensionMeta;
 use quelle_glue::prelude::*;
 
 pub struct ScribbleHub;
@@ -22,7 +23,16 @@ define_meta! {
     };
 }
 
-expose_basic!(ScribbleHub);
+impl ExtensionMeta for ScribbleHub {
+    fn info() -> Meta {
+        META.clone()
+    }
+
+    fn setup(options: quelle_extension::ExtensionOptions) -> Result<(), String> {
+        Ok(())
+    }
+}
+
 impl FetchBasic for ScribbleHub {
     fn fetch_novel(url: String) -> Result<Novel, QuelleError> {
         let response = Request::get(url.clone()).send()?;
@@ -127,8 +137,12 @@ fn volumes(id: &str) -> Result<Vec<Volume>, QuelleError> {
 
     if let Ok(nodes) = doc.select("li.toc_w") {
         for node in nodes.rev() {
-            let Ok(a) = node.as_node().select_first("a") else { continue };
-            let Some(href) = a.get_attribute("href") else { continue };
+            let Ok(a) = node.as_node().select_first("a") else {
+                continue;
+            };
+            let Some(href) = a.get_attribute("href") else {
+                continue;
+            };
 
             let time = node
                 .as_node()

@@ -4,7 +4,7 @@ use url::Url;
 use super::{Attribute, ReadingDirection};
 use crate::error::ParseError;
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Meta {
     pub id: String,
     pub name: String,

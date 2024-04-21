@@ -1,4 +1,12 @@
 {
     "rust-analyzer.check.features": "all",
     "rust-analyzer.cargo.features": "all",
+    "rust-analyzer.check.overrideCommand": [
+        "cargo",
+        "component",
+        "check",
+        "--workspace",
+        "--all-targets",
+        "--message-format=json"
+    ],
 }

@@ -9,13 +9,13 @@ pub use chapter::{Chapter, Content, TaggedDateTime};
 pub use meta::Meta;
 pub use novel::{BasicNovel, Novel};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ReadingDirection {
     Ltr,
     Rtl,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Attribute {
     Fanfiction,
 }
